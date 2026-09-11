@@ -1,460 +1,248 @@
-import { CeUtility } from "./utility.js";
-import { untargetDeadTokens, untargetAllTokens } from './removeTarget.js';
+import { CeUtility } from './utility.js';
+import { getHealthData, parseHpInput } from './health.js';
+import { planInitiativeMove } from './initiative.js';
+import { shouldClearTargets, untargetAllTokens } from './removeTarget.js';
 
-/**
- * Helper class to handle rendering the custom combat tracker.
- */
+const MODULE_ID = 'combat-enhancements';
+const ROW = '.combatant[data-combatant-id], .directory-item[data-combatant-id]';
+const DRAG_TYPE = 'application/x-combat-enhancements';
+
+/** Augment the existing tracker while preserving core and system controls. */
 export class CombatSidebarCe {
-  // This must be called in the `init` hook in order for the other hooks to
-  // fire correctly.
+  constructor() {
+    this.apps = new Set();
+    this.roots = new WeakMap();
+    this.pendingCombats = new Set();
+  }
+
   startup() {
-    // CONFIG.debug.hooks = true;
-    const removeTarget = game.settings.get('combat-enhancements', 'removeTargets');
-
-    Hooks.on('updateCombat', (...args) => {
-      if (!removeTarget) {
-        return;
-      }
-
-      untargetDeadTokens();
-      untargetAllTokens(args);
+    Hooks.on('renderCombatTracker', (app, html) => this.renderTracker(app, html));
+    Hooks.on('closeCombatTracker', app => this.apps.delete(app));
+    Hooks.on('updateActor', actor => this.refreshTrackers(c => c.actor === actor || (actor.uuid && c.actor?.uuid === actor.uuid)));
+    Hooks.on('updateToken', token => this.refreshTrackers(c => c.token === token || (token.uuid && c.token?.uuid === token.uuid)));
+    Hooks.on('updateCombat', (combat, changed, options) => {
+      if (shouldClearTargets(combat, changed, options)) untargetAllTokens();
     });
-
-    Hooks.on('deleteCombat', (...args) => {
-      if (!removeTarget) {
-        return;
-      }
-
-      untargetDeadTokens();
-      untargetAllTokens(args);
-    });
-
-    Hooks.on('ready', () => {
-      // Add an event listener for input fields. This is currently only
-      // used for updating HP on actors.
-      $('body').on('change', '.ce-modify-hp', (event) => {
-        event.preventDefault();
-
-        // Get the incput and actor element.
-        const dataset = event.currentTarget.dataset;
-        let $input = $(event.currentTarget);
-        let $actorRow = $input.parents(CeUtility.isLegacyVersion() ? '.directory-item.actor-elem' : '.combatant.actor-elem');
-
-        // If there isn't an actor element, don't proceed.
-        if (!$actorRow.length > 0) {
-          return;
-        }
-
-        if (!game.combat) {
-          return;
-        }
-
-        // Retrieve the combatant for this actor, or exit if not valid.
-        const combatant = game.combat.combatants.find(c => c.id == $actorRow.data('combatant-id'));
-        if (!combatant) {
-          return;
-        }
-
-        const actor = combatant.actor;
-
-        // Check for bad numbers, otherwise convert into a Number type.
-        let value = $input.val();
-        let inputValue = getProperty(actor, $input.attr('name'));
-        if (dataset.dtype == 'Number') {
-          value = Number(value);
-          if (Number.isNaN(value)) {
-            $input.val(inputValue);
-            return false;
-          }
-        }
-
-        // Prepare update data for the actor.
-        let updateData = {};
-        // If this started with a "+" or "-", handle it as a relative change.
-        let operation = $input.val().match(/^\+|\-/g);
-        console.log($input.attr('name'));
-        if (operation) {
-          updateData[$input.attr('name')] = Number(inputValue) + value;
-        }
-        // Otherwise, set it absolutely.
-        else {
-          updateData[$input.attr('name')] = value;
-        }
-
-        // Update the actor.
-        actor.update(updateData);
-        return;
-      });
-
-      // Drag handler for the combat tracker.
-      if (game.user.isGM) {
-        const combatantSelector = CeUtility.isLegacyVersion() ? '.directory-item' : '.combatant';
-        const combatTrackerSelector = CeUtility.isLegacyVersion() ? '#combat-tracker' : '.combat-tracker';
-        $('body')
-          // Initiate the drag event.
-          .on('dragstart', `${combatTrackerSelector} ${combatantSelector}.actor-elem`, (event) => {
-            // Set the drag data for later usage.
-            let dragData = event.currentTarget.dataset;
-            event.originalEvent.dataTransfer.setData('text/plain', JSON.stringify(dragData));
-
-            // Store the combatant type for reference. We have to do this
-            // because dragover doesn't have access to the drag data, so we
-            // store it as a new type entry that can be split later.
-            let newCombatant = game.combat.combatants.find(c => c.id == dragData.combatantId);
-            event.originalEvent.dataTransfer.setData(`newtype--${dragData.actorType}`, '');
-
-            // Set the drag image.
-            let dragIcon = $(event.currentTarget).find('.ce-image-wrapper')[0];
-            event.originalEvent.dataTransfer.setDragImage(dragIcon, 25, 25);
-          })
-          // Add a class on hover, if the actor types match.
-          .on('dragover', `${combatTrackerSelector} ${combatantSelector}.actor-elem`, (event) => {
-            // Get the drop target.
-            let $self = $(event.originalEvent.target);
-            let $dropTarget = $self.parents(combatantSelector);
-            // Exit early if we don't need to make any changes.
-            if ($dropTarget.hasClass('drop-hover')) {
-              return;
-            }
-
-            if (!$dropTarget.data('combatant-id')) {
-              return;
-            }
-
-            // Add the hover class.
-            $dropTarget.addClass('drop-hover');
-            return false;
-          })
-          // Remove the class on drag leave.
-          .on('dragleave', `${combatTrackerSelector} ${combatantSelector}.actor-elem`, (event) => {
-            // Get the drop target and remove any hover classes on it when
-            // the mouse leaves it.
-            let $self = $(event.originalEvent.target);
-            let $dropTarget = $self.parents(combatantSelector);
-            $dropTarget.removeClass('drop-hover');
-            return false;
-          })
-          // Update initiative on drop.
-          .on('drop', `${combatTrackerSelector} ${combatantSelector}.actor-elem`, async (event) => {
-            // Retrieve the default encounter.
-            let combat = game.combat;
-
-            if (combat === null || combat === undefined) {
-              // When dragging a token from the actors tab this drop event fire but we aren't in combat.
-              // This catches all instances of drop events when not in combat.
-              return;
-            }
-
-            // Retreive the drop target, remove any hover classes.
-            let $self = $(event.originalEvent.target);
-            let $dropTarget = $self.parents(combatantSelector);
-            $dropTarget.removeClass('drop-hover');
-
-            // Attempt to retrieve and parse the data transfer from the drag.
-            let data;
-            try {
-              data = JSON.parse(event.originalEvent.dataTransfer.getData('text/plain'));
-              // if (data.type !== "Item") return;
-            } catch (err) {
-              return false;
-            }
-
-            // Retrieve the combatant being dropped.
-            let newCombatant = combat.combatants.find(c => c.id == data.combatantId);
-
-            // Retrieve the combatants grouped by type.
-            let combatants = this.getCombatantsData(false);
-            // Retrieve the combatant being dropped onto.
-            let originalCombatant = combatants.find(c => {
-              return c.id == $dropTarget.data('combatant-id');
-            });
-
-            // Exit early if there's no target.
-            if (!originalCombatant?.id) {
-              return;
-            }
-
-            let nextCombatantElem = $(`.combatant[data-combatant-id="${originalCombatant.id}"] + .combatant`);
-            let nextCombatantId = nextCombatantElem.length > 0 ? nextCombatantElem.data('combatant-id') : null;
-            let nextCombatant = null;
-            if (nextCombatantId) {
-              nextCombatant = combatants.find(c => c.id == nextCombatantId);
-            }
-
-            if (nextCombatant && nextCombatant.id == newCombatant.id) {
-              return;
-            }
-
-            // Set the initiative equal to the drop target's initiative.
-            let oldInit = [
-              originalCombatant ? Number(originalCombatant.initiative) : 0,
-              nextCombatant ? Number(nextCombatant.initiative) : Number(originalCombatant.initiative) - 1,
-            ];
-
-            // If the initiative was valid, we need to update the initiative
-            // for every combatant to reset their numbers.
-            if (oldInit !== null) {
-              // Set the initiative of the actor being draged to the drop
-              // target's -1. This will later be adjusted increments of 10.
-              // let updatedCombatant = combatants.find(c => c.id == newCombatant.id);
-              let initiative = (oldInit[0] + oldInit[1]) / 2;
-              let updateOld = false;
-
-              // Handle identical initiative.
-              if (game.settings.get('combat-enhancements', 'enableInitReflow')) {
-                if (oldInit[0] == oldInit[1] && oldInit[0] % 1 == 0) {
-                  oldInit[0] += 2;
-                  initiative = (oldInit[1] + 1);
-                  updateOld = true;
-                }
-              }
-
-              let updates = [{
-                _id: newCombatant.id,
-                initiative: initiative
-              }];
-
-              if (updateOld) {
-                updates.push({
-                  _id: originalCombatant.id,
-                  initiative: oldInit[0]
-                });
-              }
-
-              // If there are updates, update the combatants at once.
-              if (updates) {
-                await combat.updateEmbeddedDocuments('Combatant', updates, {});
-                ui.combat.render();
-              }
-            }
-          }); // end of html.find('.directory-item.actor-elem')
-      }
-    });
-
-    // Re-render combat when actors are modified.
-    Hooks.on('updateActor', (actor, data, options, id) => {
-      if (game.combat === null || game.combat === undefined) {
-        return;
-      }
-
-      let inCombat = game.combat.combatants.find(c => c?.actor?.id == actor?.id);
-      if (inCombat) {
-        ui.combat.render();
-      }
-    });
-
-    Hooks.on('updateToken', (token, data, options, id) => {
-      if ((data.actorData || data.flags?.barbrawl) && game.combat) {
-        let inCombat = game.combat.combatants.find(c => c.tokenId == token.id);
-        if (inCombat) {
-          ui.combat.render();
-        }
-      }
-    });
-
-    // // TODO: Replace this hack that triggers an extra render.
-    // Hooks.on('renderSidebar', (app, html, options) => {
-    //   ui.combat.render();
-    // });
-
-    // When the combat tracker is rendered, we need to completely replace
-    // its HTML with a custom version.
-    Hooks.on('renderCombatTracker', async (app, html, options) => {
-      const safeHtml = $(html);
-      const combatantSelector = CeUtility.isLegacyVersion() ? '.directory-item' : '.combatant';
-      // If there's as combat, we can proceed.
-      if (game.combat) {
-        // Retrieve a list of the combatants grouped by actor type and sorted
-        // by their initiative count.
-        let combatants = this.getCombatantsData();
-
-        combatants.forEach(c => {
-          // Add class to trigger drag events.
-          let selector = `${combatantSelector}[data-combatant-id="${c.id}"]`;
-          let $combatant = safeHtml.find(selector);
-          $combatant.addClass('actor-elem');
-
-          // Add svg circle.
-          // console.log(c);
-          // console.log(CeUtility.getProgressCircleHtml(c.healthSvg))
-
-          $combatant.find('.token-image').wrap('<div class="ce-image-wrapper">');
-          $combatant.append($('<span class="ce-drop-indicator"></span>'));
-
-          // Display the health SVG if it should be visible.
-          if (c.displayHealth) {
-            $combatant.find('.ce-image-wrapper').append(CeUtility.getProgressCircleHtml(c.healthSvg));
-          }
-
-          if (c.editable) {
-            // Display the HP input/div.
-            let $healthInput = null;
-            if (c.editable) {
-              $healthInput = $(`<div class="ce-modify-hp-wrapper">${game.i18n.localize("COMBAT_ENHANCEMENTS.hp.label")} <input onclick="this.select();" class="ce-modify-hp" type="text" name="system.${c.combatAttr}.value" value="${getProperty(c.actor.system, c.combatAttr + '.value')}" data-dtype="Number"></div>`);
-            }
-            // else {
-            //   $healthInput = $(`<div class="ce-modify-hp-wrapper">HP ${getProperty(c.actor.system, c.combatAttr + '.value')}</div>`);
-            // }
-
-            if ($healthInput) {
-              $combatant.find('.combatant-controls').append($healthInput);
-            }
-          }
-        });
-
-        // Drag handler for the combat tracker.
-        if (game.user.isGM) {
-          const safeCombatant = safeHtml.find(`${combatantSelector}.actor-elem`);
-          safeCombatant.attr('draggable', true).addClass('draggable');
-        }
-
-        // If the hide initiative setting is true, hide non-friendly combatant's init number.
-        if (game.settings.get('combat-enhancements', 'hideNonAllyInitiative')) {
-          // Only do this for players and not GMs.
-          if (!game.user.isGM) {
-            const combatants = safeHtml.find('.combatant');
-            combatants.each((i, el) => {
-              const initDiv = el.getElementsByClassName('token-initiative')[0];
-              // Initiative was found, check to see if we should remove it.
-              if (initDiv) {
-                const combatant = game.combat.combatants.get(el.dataset.combatantId);
-                const token = combatant.token;
-                // If the token isn't friendly, hide their initiative.
-                if (token.disposition < 1) {
-                  console.log(token.name);
-                  initDiv.remove();
-                }
-              }
-            });
-          }
-        }
-      }
+    Hooks.on('deleteCombat', (combat, options) => {
+      if (shouldClearTargets(combat, {}, options, true)) untargetAllTokens();
     });
   }
 
-  /**
-   * Retrieve a list of combatants for the current combat.
-   *
-   * Combatants will be sorted into groups by actor type. Set the
-   * updateInitiative argument to true to reassign init numbers.
-   * @param {Boolean} updateInitiative
-   */
-  getCombatantsData(updateInitiative = false) {
-    // If there isn't a combat, exit and return an empty array.
-    if (!game.combat) {
-      return [];
+  getCombat(app) {
+    // An explicitly empty tracker must not fall back to an unrelated active combat.
+    return app && 'viewed' in app ? app.viewed : game.combat;
+  }
+
+  refreshTrackers(predicate = () => true) {
+    for (const app of this.apps) {
+      const combat = this.getCombat(app);
+      if (app.rendered && combat?.combatants.some(predicate)) app.render();
     }
+  }
 
-    let currentInitiative = 0;
-    // Reduce the combatants array into a new object with keys based on
-    // the actor types.
-    let combatants = game.combat.combatants.filter(combatant => {
-      // Append valid actors to the appropriate group.
-      if (combatant.actor) {
-        // Initialize the group if it doesn't exist.
-        let group = combatant.actor.type;
-        let alwaysOnType = game.settings.get('combat-enhancements', 'showHpForType');
-        let editableHp = game.settings.get('combat-enhancements', 'enableHpField');
-        let displayHealthRadials = game.settings.get('combat-enhancements', 'enableHpRadial');
-
-        // Retrieve the health bars mode from the token's resource settings.
-        let displayBarsMode = Object.entries(CONST.TOKEN_DISPLAY_MODES).find(i => i[1] == combatant.token.displayBars)[0];
-        // Assume player characters should always show their health bar.
-        let displayHealth = alwaysOnType && group == alwaysOnType ? true : false;
-
-        // Determine the combat attribute.
-        if (combatant?.actor?.system?.attributes?.hp?.value) {
-          combatant.combatAttr = 'attributes.hp';
-        }
-
-        if (combatant.token.bar1.attribute) {
-          combatant.combatAttr = combatant.token.bar1.attribute;
-        }
-
-        // If this is a group other than character (such as NPC), we need to
-        // evaluate whether or not this player can see its health bar.
-        if (!alwaysOnType || group != alwaysOnType) {
-          // If the mode is one of the owner options, only the token owner or
-          // the GM should be able to see it.
-          if (displayBarsMode.includes("OWNER")) {
-            if (combatant.isOwner || game.user.isGM) {
-              displayHealth = true;
-            }
-          }
-          // For other modes, always show it.
-          else if (displayBarsMode != "NONE") {
-            displayHealth = true;
-          }
-          // If it's set to the none mode, hide it from players, but allow
-          // the GM to see it.
-          else {
-            displayHealth = game.user.isGM ? true : false;
-          }
-
-          // If the updateInitiative flag was set to true, recalculate the
-          // initiative for each actor while we're looping through them.
-          if (updateInitiative) {
-            combatant.initiative = currentInitiative;
-            currentInitiative = currentInitiative + 10;
-          }
-        }
-
-        // Set a property based on the health mode earlier.
-        combatant.displayHealth = displayHealthRadials ? displayHealth : false;
-        // Set a property for whether or not this is editable. This controls
-        // whether editabel fields like HP will be shown as an input or a div
-        // in the combat tracker HTML template.
-        combatant.editable = editableHp && (combatant.isOwner || game.user.isGM);
-
-
-        // If the Bar Brawl module is enabled, let it handle the bar's value and visibility.
-        let currentHealth, maxHealth;
-        if (game.modules.get("barbrawl")?.active) {
-          // Fetch the bar's validated source data.
-          let barData = window.BarBrawlApi?.getBar(combatant.token, "bar1");
-          if (displayHealth && barData && window.BarBrawlApi?.isBarVisible) {
-            // Make sure that the bar should be visible for the current user.
-            displayHealth = window.BarBrawlApi.isBarVisible(combatant.token.object, barData, true);
-          }
-          if (barData && window.BarBrawlApi?.getActualBarValue) {
-            // Fetch the value that should actually be displayed on the bar.
-            const barValue = window.BarBrawlApi.getActualBarValue(combatant.token, barData);
-            currentHealth = barValue.value;
-            maxHealth = barValue.max;
-          }
-        }
-        // Otherwise, retrieve the current and max health bar data.
-        else {
-          if (currentHealth === undefined) {
-            let resource = null;
-            if (typeof combatant.token.getBarAttribute === 'function') {
-              try {
-                resource = combatant.token.getBarAttribute(null, { alternative: combatant.combatAttr });
-              } catch (err) {
-                resource = combatant.token.getBarAttribute?.({ alternative: combatant.combatAttr });
-              }
-            }
-            if (resource && resource.type === "bar") {
-              currentHealth = resource.value;
-              maxHealth = resource.max;
-            }
-          }
-
-        }
-
-        // Build the radial progress circle settings for the template.
-        combatant.healthSvg = CeUtility.getProgressCircle({
-          current: currentHealth,
-          max: maxHealth,
-          radius: 16
-        });
-
-        // Return true to include combatant in filter
-        return true;
+  renderTracker(app, html) {
+    // V12 passes jQuery; V13/V14 pass a native element, possibly in another window.
+    const root = html?.nodeType === 1 ? html : html?.[0];
+    if (!root?.querySelectorAll) return;
+    this.apps.add(app);
+    this.bindListeners(root, app);
+    const combat = this.getCombat(app);
+    for (const row of root.querySelectorAll(ROW)) {
+      // The same DOM can survive partial renders. Remove only our own additions.
+      row.querySelectorAll('.ce-modify-hp-wrapper, .ce-drop-indicator, .ce-image-wrapper > .progress-ring')
+        .forEach(element => element.remove());
+      row.querySelectorAll('.ce-image-wrapper').forEach(wrapper => wrapper.replaceWith(...wrapper.childNodes));
+      if (row.dataset.ceDraggable !== undefined) {
+        if (row.dataset.ceDraggable === 'unset') row.removeAttribute('draggable');
+        else row.setAttribute('draggable', row.dataset.ceDraggable);
+        delete row.dataset.ceDraggable;
       }
-    });
+      row.classList.remove('ce-combatant', 'ce-hide-initiative', 'ce-drop-before', 'ce-drop-after');
+      const combatant = combat?.combatants.get(row.dataset.combatantId);
+      if (!combatant) continue;
+      row.classList.add('ce-combatant');
+      const health = getHealthData(combatant);
+      const doc = root.ownerDocument;
+      const image = row.querySelector('.token-image');
+      if (health?.displayHealth && image) {
+        const wrapper = doc.createElement('div');
+        wrapper.className = 'ce-image-wrapper';
+        image.before(wrapper);
+        wrapper.append(image);
+        wrapper.insertAdjacentHTML('beforeend', CeUtility.getProgressCircleHtml(
+          CeUtility.getProgressCircle({ current: health.current, max: health.max })));
+      }
+      if (health?.editable) {
+        const label = doc.createElement('label');
+        label.className = 'ce-modify-hp-wrapper';
+        label.append(`${game.i18n.localize('COMBAT_ENHANCEMENTS.hp.label')} `);
+        const input = doc.createElement('input');
+        input.className = 'ce-modify-hp';
+        input.type = 'text';
+        input.autocomplete = 'off';
+        input.value = health.value;
+        // No name: keep this field out of core/system ApplicationV2 form submissions.
+        input.dataset.ceHpPath = health.path;
+        input.setAttribute('aria-label', `${game.i18n.localize('COMBAT_ENHANCEMENTS.hp.label')}: ${combatant.name ?? ''}`);
+        label.append(input);
+        (row.querySelector('.combatant-controls') ?? row.querySelector('.token-name') ?? row).append(label);
+      }
+      if (game.user.isGM) {
+        row.dataset.ceDraggable = row.getAttribute('draggable') ?? 'unset';
+        row.draggable = true;
+        const indicator = doc.createElement('span');
+        indicator.className = 'ce-drop-indicator';
+        row.append(indicator);
+      }
+      row.classList.toggle('ce-hide-initiative', Boolean(!game.user.isGM
+        && game.settings.get(MODULE_ID, 'hideNonAllyInitiative')
+        && combatant.token?.disposition !== CONST.TOKEN_DISPOSITIONS.FRIENDLY));
+    }
+  }
 
-    // Return the list of combatants
-    return combatants
+  bindListeners(root, app) {
+    const existing = this.roots.get(root);
+    if (existing) { existing.app = app; return; }
+    const state = { app };
+    this.roots.set(root, state);
+    // Root capture prevents core row/initiative handlers from consuming HP events.
+    for (const type of ['pointerdown', 'mousedown', 'click', 'dblclick', 'keydown']) {
+      root.addEventListener(type, event => {
+        if (!event.target.closest?.('.ce-modify-hp-wrapper')) return;
+        event.stopPropagation();
+        const input = event.target.closest('.ce-modify-hp');
+        if (!input) return;
+        if (type === 'click') input.select();
+        if (type === 'keydown' && ['Enter', 'Escape'].includes(event.key)) {
+          event.preventDefault();
+          if (event.key === 'Escape') {
+            const row = input.closest(ROW);
+            const health = getHealthData(this.getCombat(state.app)?.combatants.get(row?.dataset.combatantId));
+            if (health) input.value = health.value;
+          }
+          input.blur();
+        }
+      }, true);
+    }
+    root.addEventListener('change', event => {
+      const input = event.target.closest?.('.ce-modify-hp');
+      if (!input) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void this.updateHp(state.app, input);
+    }, true);
+    root.addEventListener('dragstart', event => this.onDragStart(state.app, event), true);
+    root.addEventListener('dragover', event => this.onDragOver(root, event), true);
+    root.addEventListener('dragleave', event => {
+      const row = event.target.closest?.(ROW);
+      if (row && !row.contains(event.relatedTarget)) row.classList.remove('ce-drop-before', 'ce-drop-after');
+    });
+    root.addEventListener('dragend', () => this.clearDropIndicators(root));
+    root.addEventListener('drop', event => { void this.onDrop(state.app, root, event); }, true);
+  }
+
+  async updateHp(app, input) {
+    if (input.disabled) return;
+    const combat = this.getCombat(app);
+    const combatant = combat?.combatants.get(input.closest(ROW)?.dataset.combatantId);
+    const health = getHealthData(combatant);
+    if (!health?.editable || input.dataset.ceHpPath !== health.path) return;
+    const value = parseHpInput(input.value, health.value);
+    if (value === null) {
+      input.value = health.value;
+      ui.notifications.warn(game.i18n.localize('COMBAT_ENHANCEMENTS.invalidHp'));
+      return;
+    }
+    if (value === health.value) { input.value = value; return; }
+    input.disabled = true;
+    try {
+      await health.actor.update({ [health.path]: value });
+      input.value = foundry.utils.getProperty(health.actor, health.path);
+    } catch (error) {
+      input.value = foundry.utils.getProperty(health.actor, health.path);
+      this.reportError(error);
+    } finally {
+      input.disabled = false;
+    }
+  }
+
+  onDragStart(app, event) {
+    if (!game.user.isGM || !event.dataTransfer) return;
+    const row = event.target.closest?.(ROW);
+    const combat = this.getCombat(app);
+    if (!combat?.combatants.get(row?.dataset.combatantId)) return;
+    if (event.target.closest('input, button, a, select, textarea')) {
+      event.preventDefault();
+      return;
+    }
+    const data = { type: MODULE_ID, combatId: combat.id, combatantId: row.dataset.combatantId };
+    event.dataTransfer.setData(DRAG_TYPE, JSON.stringify(data));
+    event.dataTransfer.setData('text/plain', JSON.stringify(data));
+    event.dataTransfer.effectAllowed = 'move';
+    const image = row.querySelector('.ce-image-wrapper, .token-image') ?? row;
+    event.dataTransfer.setDragImage?.(image, 24, 24);
+    event.stopPropagation();
+  }
+
+  clearDropIndicators(root) {
+    root.querySelectorAll('.ce-drop-before, .ce-drop-after')
+      .forEach(row => row.classList.remove('ce-drop-before', 'ce-drop-after'));
+  }
+
+  isOurDrag(event) {
+    return game.user.isGM && Array.from(event.dataTransfer?.types ?? []).includes(DRAG_TYPE);
+  }
+
+  onDragOver(root, event) {
+    if (!this.isOurDrag(event)) return;
+    const row = event.target.closest?.(ROW);
+    if (!row) return;
+    // preventDefault is required on EVERY dragover, including over the row itself.
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'move';
+    this.clearDropIndicators(root);
+    const rect = row.getBoundingClientRect();
+    row.classList.add(event.clientY < rect.top + rect.height / 2 ? 'ce-drop-before' : 'ce-drop-after');
+  }
+
+  async onDrop(app, root, event) {
+    this.clearDropIndicators(root);
+    if (!this.isOurDrag(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const row = event.target.closest?.(ROW);
+    const combat = this.getCombat(app);
+    if (!row || !combat || this.pendingCombats.has(combat.id)) return;
+    let data;
+    try { data = JSON.parse(event.dataTransfer.getData(DRAG_TYPE)); }
+    catch { return; }
+    if (data?.type !== MODULE_ID || data.combatId !== combat.id) return;
+    const rect = row.getBoundingClientRect();
+    const result = planInitiativeMove(combat.turns, data.combatantId, row.dataset.combatantId,
+      event.clientY < rect.top + rect.height / 2, game.settings.get(MODULE_ID, 'enableInitReflow'));
+    if (result.error) {
+      ui.notifications.warn(game.i18n.localize(`COMBAT_ENHANCEMENTS.${result.error}`));
+      return;
+    }
+    if (!result.updates.length) return;
+    this.pendingCombats.add(combat.id);
+    const activeId = combat.combatant?.id;
+    const options = { combatEnhancementsReorder: true, turnEvents: false };
+    try {
+      await combat.updateEmbeddedDocuments('Combatant', result.updates, options);
+      const turn = combat.turns.findIndex(c => c.id === activeId);
+      if (activeId && turn >= 0 && turn !== combat.turn) await combat.update({ turn }, options);
+      this.refreshTrackers(c => c.parent?.id === combat.id);
+    } catch (error) {
+      this.reportError(error);
+    } finally {
+      this.pendingCombats.delete(combat.id);
+    }
+  }
+
+  reportError(error) {
+    console.error('Combat Enhancements | Update failed', error);
+    ui.notifications.error(game.i18n.localize('COMBAT_ENHANCEMENTS.updateFailed'));
   }
 }

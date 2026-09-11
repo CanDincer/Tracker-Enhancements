@@ -1,18 +1,11 @@
 const gulp = require('gulp');
 const prefix = require('gulp-autoprefixer');
-const sourcemaps = require('gulp-sourcemaps');
 const sass = require('gulp-sass')(require('sass'));
 const yaml = require('gulp-yaml');
 
 /* ----------------------------------------- */
 /*  Compile Sass
 /* ----------------------------------------- */
-
-// Small error handler helper function.
-function handleError(err) {
-  console.log(err.toString());
-  this.emit('end');
-}
 
 const SYSTEM_SCSS = ["styles/src/**/*.scss"];
 function compileScss() {
@@ -21,10 +14,7 @@ function compileScss() {
     outputStyle: 'compressed'
   };
   return gulp.src(SYSTEM_SCSS)
-    .pipe(
-      sass(options)
-        .on('error', handleError)
-    )
+    .pipe(sass(options))
     .pipe(prefix({
       cascade: false
     }))
@@ -64,4 +54,5 @@ exports.default = gulp.series(
 );
 exports.css = cssTask;
 exports.yaml = yamlTask;
+exports.build = gulp.parallel(cssTask, yamlTask);
 // exports.scripts = scripts;

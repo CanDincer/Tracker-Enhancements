@@ -1,19 +1,13 @@
-export function untargetDeadTokens() {
-  game.user.targets.forEach((t) => {
-    if (t.actor?.system.attributes.hp.value <= 0) {
-      t.setTarget(false, { releaseOthers: false });
-      game.user.targets.delete(t);
-    }
-  });
+export function untargetAllTokens() {
+  // setTarget updates Foundry's target set and broadcasts the change itself.
+  for (const token of Array.from(game.user.targets ?? [])) {
+    token.setTarget(false, { releaseOthers: false });
+  }
 }
 
-export function untargetAllTokens(...args) {
-  const params = args[0];
-  const combat = params[0] ?? game.combat;
-  if (game.user.targets) {
-    game.user.targets.forEach((t) => {
-      t.setTarget(false, { releaseOthers: false });
-    });
-    game.user.targets.clear();
-  }
+export function shouldClearTargets(combat, changed, options = {}, deleted = false) {
+  if (!game.settings.get('combat-enhancements', 'removeTargets') || options.combatEnhancementsReorder) return false;
+  const relevant = game.combat?.id === combat.id || (combat.active
+    && (!combat.scene || combat.scene.id === game.user.viewedScene));
+  return Boolean(relevant && (deleted || Object.hasOwn(changed, 'turn') || Object.hasOwn(changed, 'round')));
 }
