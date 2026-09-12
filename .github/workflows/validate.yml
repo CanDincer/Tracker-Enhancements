@@ -1,0 +1,33 @@
+name: Validate
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Restore dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Collect recovered build outputs
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          for (const path of ['package-lock.json', 'styles/dist/combat-enhancements.css', 'lang/en.json']) {
+            const contents = fs.readFileSync(path, 'utf8');
+            for (let offset = 0, index = 0; offset < contents.length; offset += 8000, index++) {
+              console.log('CE_GENERATED_CHUNK ' + JSON.stringify({path, index, text: contents.slice(offset, offset + 8000)}));
+            }
+          }
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
