@@ -4,16 +4,18 @@ Hooks.once('init', function() {
   const combatSidebar = new CombatSidebarCe();
   const refresh = () => combatSidebar.refreshTrackers();
 
-  // TODO: Determine a good way to localize this.
   const actorTypes = game.system?.documentTypes?.Actor ?? CONFIG.Actor?.documentTypes ?? {};
   const types = Array.isArray(actorTypes) ? actorTypes : Object.keys(actorTypes);
-  let choices = {
-    '': '-'
+  const choices = {
+    '': game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.tokenVisibility'),
+    '*': game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.all'),
   };
-  for (let type of types) {
-    choices[type] = type;
+  for (const type of types) {
+    choices[type] = `${game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.actorType')}: ${type}`;
   }
 
+  // HP disclosure is a GM-controlled world policy shared by all player clients.
+  // Keep the existing setting key and actor-type values so saved choices remain valid.
   game.settings.register('combat-enhancements', 'showHpForType', {
     name: game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.label'),
     hint: game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHPForType.description'),

@@ -1,5 +1,8 @@
 # Unreleased - V14 repair
 
+- Add All combatants to player HP circle visibility so owned PCs, other PCs and NPCs can be shown together.
+- Clarify literal actor-type choices and world settings in Monk's Player Settings; retain saved choices and HP edit permissions.
+- Add regression and browser coverage for the reported player visibility combinations.
 - Use native tracker elements and namespaced Foundry utilities while retaining the V12/V13 render interface.
 - Preserve core portraits, system controls, and initiative handlers across repeated renders and detached windows.
 - Resolve HP from the viewed encounter, support zero/scalar/custom resources, and recheck update permissions.

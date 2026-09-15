@@ -18,7 +18,19 @@ To try a development branch before release, download its source archive, extract
 
 The module uses the token's Bar 1 resource, falling back to `system.attributes.hp` when no resource is configured. Both scalar values and `{value, max}` resources are supported for editing. A health ring needs a finite value and positive maximum; zero HP is valid.
 
-GMs see health rings. Player visibility follows the configured token bar modes and the "Always show health for actor type" setting. Public hover/control bar modes display a ring in the tracker; owner-only modes require ownership. When Bar Brawl supplies a visibility rule, that rule can hide the ring. Tokens without a canvas object are handled conservatively.
+GMs see health rings when enabled. **Player HP circle visibility** controls which rings players see:
+
+| Choice | Player display |
+| --- | --- |
+| Use token visibility | Follow token Bar 1 visibility, including ownership requirements |
+| All combatants | Show every valid HP circle in the viewed tracker, including the player's own character, other PCs, and NPCs |
+| Actor type: character / npc / another type | Follow token visibility and additionally show actors of the selected type |
+
+`encounter`, `group`, and `vehicle` can be literal actor types supplied by the game system. **Actor type: encounter** only matches that type; choose **All combatants** to include everyone in combat. Existing saved choices retain their meaning. Public hover/control bar modes display a ring in the tracker; owner-only modes require ownership.
+
+All Combat Enhancements settings are **world settings**, configured by the GM and shared by every player. In Monk's Player Settings, keep **View settings for Player** on your own GM account. Selecting another player or **All Players** hides these settings because that view filters out world settings; it does not change whom the settings affect. To show PCs and NPCs together, enable **Enable HP radial bar**, set **Player HP circle visibility** to **All combatants**, and save as GM.
+
+When Bar Brawl supplies a visibility rule, that rule can still hide a ring, including in All combatants mode. A ring needs a valid HP resource and positive maximum, and the actor must be present in the player's tracker. Tokens without a canvas object are handled conservatively. Showing a ring does not grant permission to edit HP.
 
 HP fields require permission to update the actor. Enter an absolute value such as `20` or a signed adjustment such as `-5` or `+3`. Enter or leaving the field saves; Escape cancels. Blank and malformed values are rejected. The game system remains responsible for its own HP limits and update rules.
 

@@ -71,6 +71,60 @@ test('actor type override and feature toggles take effect immediately', () => {
   assert.equal(getHealthData(c).editable, false);
 });
 
+test('players can see their own PC, other PCs and NPCs together with All combatants', () => {
+  game.user.isGM = false;
+  const own = combatant('own', 20, { owner: true });
+  const other = combatant('other', 15);
+  const npc = combatant('npc', 10, { hp: 0 });
+  own.actor.type = other.actor.type = 'character';
+  for (const c of [own, other, npc]) c.token.displayBars = CONST.TOKEN_DISPLAY_MODES.OWNER;
+  for (const [choice, expected] of [
+    ['', [true, false, false]],
+    ['npc', [true, false, true]],
+    ['character', [true, true, false]],
+    ['encounter', [true, false, false]],
+    ['group', [true, false, false]],
+    ['*', [true, true, true]],
+    ['', [true, false, false]],
+  ]) {
+    env.settings.set('showHpForType', choice);
+    assert.deepEqual([own, other, npc].map(c => getHealthData(c).displayHealth), expected, choice);
+    assert.deepEqual([own, other, npc].map(c => getHealthData(c).editable), [true, false, false]);
+  }
+});
+
+test('encounter and group remain literal actor types, not aliases for all combatants', () => {
+  game.user.isGM = false;
+  const c = combatant('special');
+  for (const type of ['encounter', 'group']) {
+    c.actor.type = type;
+    env.settings.set('showHpForType', type);
+    assert.equal(getHealthData(c).displayHealth, true);
+    env.settings.set('showHpForType', 'character');
+    assert.equal(getHealthData(c).displayHealth, false);
+  }
+});
+
+test('All combatants respects the master toggle, valid resources and Bar Brawl visibility', () => {
+  game.user.isGM = false;
+  env.settings.set('showHpForType', '*');
+  const c = combatant('enemy');
+  assert.equal(getHealthData(c).displayHealth, true);
+  assert.equal(getHealthData(c).editable, false);
+  env.settings.set('enableHpRadial', false);
+  assert.equal(getHealthData(c).displayHealth, false);
+  env.settings.set('enableHpRadial', true);
+  assert.equal(getHealthData(combatant('invalid-max', 0, { max: 0 })).displayHealth, false);
+  assert.equal(getHealthData({ actor: null }), null);
+  game.modules.set('barbrawl', { active: true });
+  globalThis.BarBrawlApi = { getBar: () => ({}), isBarVisible: () => false };
+  assert.equal(getHealthData(c).displayHealth, false);
+  BarBrawlApi.isBarVisible = () => true;
+  assert.equal(getHealthData(c).displayHealth, true);
+  c.token.object = null;
+  assert.equal(getHealthData(c).displayHealth, false);
+});
+
 test('Bar Brawl visibility veto is applied and missing APIs fall back to core bars', () => {
   const c = combatant('bar');
   game.modules.set('barbrawl', { active: true });

@@ -12,7 +12,9 @@ export function getHealthData(combatant) {
   const mode = token?.displayBars ?? modes.NONE;
   const publicBar = [modes.ALWAYS, modes.CONTROL, modes.HOVER].includes(mode);
   const ownerBar = [modes.OWNER, modes.OWNER_HOVER].includes(mode) && owner;
-  let visible = game.user.isGM || publicBar || ownerBar || (alwaysOnType && actor.type === alwaysOnType);
+  // '*' includes every combatant type; names such as 'encounter' remain literal actor types.
+  let visible = game.user.isGM || publicBar || ownerBar || alwaysOnType === '*'
+    || (alwaysOnType && actor.type === alwaysOnType);
 
   // Bar 1 overrides the conventional HP resource, including at zero HP.
   let attribute = token?.bar1?.attribute || 'attributes.hp';

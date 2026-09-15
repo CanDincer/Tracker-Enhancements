@@ -2,7 +2,7 @@ import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { shouldClearTargets, untargetAllTokens } from '../module/removeTarget.js';
 import { CombatSidebarCe } from '../module/combat.js';
-import { environment, encounter } from './helpers.mjs';
+import { environment, encounter, combatant, tracker } from './helpers.mjs';
 
 let env;
 beforeEach(() => { env = environment(); });
@@ -61,8 +61,23 @@ test('init accepts array and object actor-type registries without legacy globals
     game.system.documentTypes.Actor = types;
     await import(`../module/combat-enhancements.js?${index}`);
     await env.emit('init');
-    assert.deepEqual(Object.keys(env.registrations.get('showHpForType').choices), ['', 'character', 'npc']);
+    assert.deepEqual(Object.keys(env.registrations.get('showHpForType').choices), ['', '*', 'character', 'npc']);
     assert.equal(env.registrations.get('showHpForType').default, '');
     assert.equal(env.registrations.has('enableHpField'), true);
   }
+});
+
+test('visibility is a world setting and received changes refresh player trackers', async () => {
+  await import('../module/combat-enhancements.js?world-visibility');
+  await env.emit('init');
+  const setting = env.registrations.get('showHpForType');
+  assert.equal(setting.scope, 'world');
+  assert.equal(setting.default, '');
+  assert.ok(Object.hasOwn(setting.choices, '*'));
+  game.user.isGM = false;
+  const { app, root } = tracker(encounter('viewed', [combatant('a')]));
+  await env.emit('renderCombatTracker', app, root);
+  env.settings.set('showHpForType', '*');
+  setting.onChange('*');
+  assert.equal(app.renders, 1);
 });

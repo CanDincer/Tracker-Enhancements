@@ -69,9 +69,28 @@ try {
   assert.equal(await page.locator('.ce-modify-hp').count(), 1);
   assert.equal(await page.locator('.ce-hide-initiative').count(), 2);
   assert.equal(await page.locator('[data-combatant-id="b"] .token-initiative').isVisible(), false);
+
+  // Match a player's owned PC, another player's PC and an NPC with owner-only bars.
+  await page.evaluate(() => {
+    testHarness.members[2].actor.type = 'npc';
+    for (const c of testHarness.members) c.token.displayBars = CONST.TOKEN_DISPLAY_MODES.OWNER;
+  });
+  for (const [choice, expected] of [
+    ['', ['a']], ['npc', ['a', 'c']], ['character', ['a', 'b']],
+    ['encounter', ['a']], ['group', ['a']], ['*', ['a', 'b', 'c']], ['', ['a']],
+  ]) {
+    await page.evaluate(choice => {
+      testHarness.settings.set('showHpForType', choice);
+      testHarness.app.render();
+    }, choice);
+    const visible = await page.locator('.progress-ring').evaluateAll(rings =>
+      rings.map(ring => ring.closest('[data-combatant-id]').dataset.combatantId).sort());
+    assert.deepEqual(visible, expected, `Player HP circles for ${choice || 'token visibility'}`);
+    assert.equal(await page.locator('.ce-modify-hp').count(), 1);
+  }
   assert.deepEqual(await page.evaluate(() => testHarness.errors), []);
   assert.deepEqual(failures, []);
-  console.log('Browser smoke passed: HP save/cancel/validation, core controls, two themes, drag/drop, active turn, player visibility.');
+  console.log('Browser smoke passed: HP save/cancel/validation, core controls, two themes, drag/drop, active turn, player HP visibility choices.');
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));
