@@ -1,14 +1,14 @@
-import { CeUtility } from './utility.js';
+import { TrackerUtility } from './utility.js';
 import { getHealthData, parseHpInput } from './health.js';
 import { planInitiativeMove } from './initiative.js';
 import { shouldClearTargets, untargetAllTokens } from './removeTarget.js';
 
-const MODULE_ID = 'combat-enhancements';
+const MODULE_ID = 'tracker-enhancements';
 const ROW = '.combatant[data-combatant-id], .directory-item[data-combatant-id]';
-const DRAG_TYPE = 'application/x-combat-enhancements';
+const DRAG_TYPE = 'application/x-tracker-enhancements';
 
 /** Augment the existing tracker while preserving core and system controls. */
-export class CombatSidebarCe {
+export class TrackerEnhancements {
   constructor() {
     this.apps = new Set();
     this.roots = new WeakMap();
@@ -49,52 +49,52 @@ export class CombatSidebarCe {
     const combat = this.getCombat(app);
     for (const row of root.querySelectorAll(ROW)) {
       // The same DOM can survive partial renders. Remove only our own additions.
-      row.querySelectorAll('.ce-modify-hp-wrapper, .ce-drop-indicator, .ce-image-wrapper > .progress-ring')
+      row.querySelectorAll('.te-modify-hp-wrapper, .te-drop-indicator, .te-image-wrapper > .progress-ring')
         .forEach(element => element.remove());
-      row.querySelectorAll('.ce-image-wrapper').forEach(wrapper => wrapper.replaceWith(...wrapper.childNodes));
-      if (row.dataset.ceDraggable !== undefined) {
-        if (row.dataset.ceDraggable === 'unset') row.removeAttribute('draggable');
-        else row.setAttribute('draggable', row.dataset.ceDraggable);
-        delete row.dataset.ceDraggable;
+      row.querySelectorAll('.te-image-wrapper').forEach(wrapper => wrapper.replaceWith(...wrapper.childNodes));
+      if (row.dataset.teDraggable !== undefined) {
+        if (row.dataset.teDraggable === 'unset') row.removeAttribute('draggable');
+        else row.setAttribute('draggable', row.dataset.teDraggable);
+        delete row.dataset.teDraggable;
       }
-      row.classList.remove('ce-combatant', 'ce-hide-initiative', 'ce-drop-before', 'ce-drop-after');
+      row.classList.remove('te-combatant', 'te-hide-initiative', 'te-drop-before', 'te-drop-after');
       const combatant = combat?.combatants.get(row.dataset.combatantId);
       if (!combatant) continue;
-      row.classList.add('ce-combatant');
+      row.classList.add('te-combatant');
       const health = getHealthData(combatant);
       const doc = root.ownerDocument;
       const image = row.querySelector('.token-image');
       if (health?.displayHealth && image) {
         const wrapper = doc.createElement('div');
-        wrapper.className = 'ce-image-wrapper';
+        wrapper.className = 'te-image-wrapper';
         image.before(wrapper);
         wrapper.append(image);
-        wrapper.insertAdjacentHTML('beforeend', CeUtility.getProgressCircleHtml(
-          CeUtility.getProgressCircle({ current: health.current, max: health.max })));
+        wrapper.insertAdjacentHTML('beforeend', TrackerUtility.getProgressCircleHtml(
+          TrackerUtility.getProgressCircle({ current: health.current, max: health.max })));
       }
       if (health?.editable) {
         const label = doc.createElement('label');
-        label.className = 'ce-modify-hp-wrapper';
-        label.append(`${game.i18n.localize('COMBAT_ENHANCEMENTS.hp.label')} `);
+        label.className = 'te-modify-hp-wrapper';
+        label.append(`${game.i18n.localize('TRACKER_ENHANCEMENTS.hp.label')} `);
         const input = doc.createElement('input');
-        input.className = 'ce-modify-hp';
+        input.className = 'te-modify-hp';
         input.type = 'text';
         input.autocomplete = 'off';
         input.value = health.value;
         // No name: keep this field out of core/system ApplicationV2 form submissions.
-        input.dataset.ceHpPath = health.path;
-        input.setAttribute('aria-label', `${game.i18n.localize('COMBAT_ENHANCEMENTS.hp.label')}: ${combatant.name ?? ''}`);
+        input.dataset.teHpPath = health.path;
+        input.setAttribute('aria-label', `${game.i18n.localize('TRACKER_ENHANCEMENTS.hp.label')}: ${combatant.name ?? ''}`);
         label.append(input);
         (row.querySelector('.combatant-controls') ?? row.querySelector('.token-name') ?? row).append(label);
       }
       if (game.user.isGM) {
-        row.dataset.ceDraggable = row.getAttribute('draggable') ?? 'unset';
+        row.dataset.teDraggable = row.getAttribute('draggable') ?? 'unset';
         row.draggable = true;
         const indicator = doc.createElement('span');
-        indicator.className = 'ce-drop-indicator';
+        indicator.className = 'te-drop-indicator';
         row.append(indicator);
       }
-      row.classList.toggle('ce-hide-initiative', Boolean(!game.user.isGM
+      row.classList.toggle('te-hide-initiative', Boolean(!game.user.isGM
         && game.settings.get(MODULE_ID, 'hideNonAllyInitiative')
         && combatant.token?.disposition !== CONST.TOKEN_DISPOSITIONS.FRIENDLY));
     }
@@ -108,9 +108,9 @@ export class CombatSidebarCe {
     // Root capture prevents core row/initiative handlers from consuming HP events.
     for (const type of ['pointerdown', 'mousedown', 'click', 'dblclick', 'keydown']) {
       root.addEventListener(type, event => {
-        if (!event.target.closest?.('.ce-modify-hp-wrapper')) return;
+        if (!event.target.closest?.('.te-modify-hp-wrapper')) return;
         event.stopPropagation();
-        const input = event.target.closest('.ce-modify-hp');
+        const input = event.target.closest('.te-modify-hp');
         if (!input) return;
         if (type === 'click') input.select();
         if (type === 'keydown' && ['Enter', 'Escape'].includes(event.key)) {
@@ -125,7 +125,7 @@ export class CombatSidebarCe {
       }, true);
     }
     root.addEventListener('change', event => {
-      const input = event.target.closest?.('.ce-modify-hp');
+      const input = event.target.closest?.('.te-modify-hp');
       if (!input) return;
       event.preventDefault();
       event.stopPropagation();
@@ -135,7 +135,7 @@ export class CombatSidebarCe {
     root.addEventListener('dragover', event => this.onDragOver(root, event), true);
     root.addEventListener('dragleave', event => {
       const row = event.target.closest?.(ROW);
-      if (row && !row.contains(event.relatedTarget)) row.classList.remove('ce-drop-before', 'ce-drop-after');
+      if (row && !row.contains(event.relatedTarget)) row.classList.remove('te-drop-before', 'te-drop-after');
     });
     root.addEventListener('dragend', () => this.clearDropIndicators(root));
     root.addEventListener('drop', event => { void this.onDrop(state.app, root, event); }, true);
@@ -146,11 +146,11 @@ export class CombatSidebarCe {
     const combat = this.getCombat(app);
     const combatant = combat?.combatants.get(input.closest(ROW)?.dataset.combatantId);
     const health = getHealthData(combatant);
-    if (!health?.editable || input.dataset.ceHpPath !== health.path) return;
+    if (!health?.editable || input.dataset.teHpPath !== health.path) return;
     const value = parseHpInput(input.value, health.value);
     if (value === null) {
       input.value = health.value;
-      ui.notifications.warn(game.i18n.localize('COMBAT_ENHANCEMENTS.invalidHp'));
+      ui.notifications.warn(game.i18n.localize('TRACKER_ENHANCEMENTS.invalidHp'));
       return;
     }
     if (value === health.value) { input.value = value; return; }
@@ -179,14 +179,14 @@ export class CombatSidebarCe {
     event.dataTransfer.setData(DRAG_TYPE, JSON.stringify(data));
     event.dataTransfer.setData('text/plain', JSON.stringify(data));
     event.dataTransfer.effectAllowed = 'move';
-    const image = row.querySelector('.ce-image-wrapper, .token-image') ?? row;
+    const image = row.querySelector('.te-image-wrapper, .token-image') ?? row;
     event.dataTransfer.setDragImage?.(image, 24, 24);
     event.stopPropagation();
   }
 
   clearDropIndicators(root) {
-    root.querySelectorAll('.ce-drop-before, .ce-drop-after')
-      .forEach(row => row.classList.remove('ce-drop-before', 'ce-drop-after'));
+    root.querySelectorAll('.te-drop-before, .te-drop-after')
+      .forEach(row => row.classList.remove('te-drop-before', 'te-drop-after'));
   }
 
   isOurDrag(event) {
@@ -203,7 +203,7 @@ export class CombatSidebarCe {
     event.dataTransfer.dropEffect = 'move';
     this.clearDropIndicators(root);
     const rect = row.getBoundingClientRect();
-    row.classList.add(event.clientY < rect.top + rect.height / 2 ? 'ce-drop-before' : 'ce-drop-after');
+    row.classList.add(event.clientY < rect.top + rect.height / 2 ? 'te-drop-before' : 'te-drop-after');
   }
 
   async onDrop(app, root, event) {
@@ -222,13 +222,13 @@ export class CombatSidebarCe {
     const result = planInitiativeMove(combat.turns, data.combatantId, row.dataset.combatantId,
       event.clientY < rect.top + rect.height / 2, game.settings.get(MODULE_ID, 'enableInitReflow'));
     if (result.error) {
-      ui.notifications.warn(game.i18n.localize(`COMBAT_ENHANCEMENTS.${result.error}`));
+      ui.notifications.warn(game.i18n.localize(`TRACKER_ENHANCEMENTS.${result.error}`));
       return;
     }
     if (!result.updates.length) return;
     this.pendingCombats.add(combat.id);
     const activeId = combat.combatant?.id;
-    const options = { combatEnhancementsReorder: true, turnEvents: false };
+    const options = { trackerEnhancementsReorder: true, turnEvents: false };
     try {
       await combat.updateEmbeddedDocuments('Combatant', result.updates, options);
       const turn = combat.turns.findIndex(c => c.id === activeId);
@@ -242,7 +242,7 @@ export class CombatSidebarCe {
   }
 
   reportError(error) {
-    console.error('Combat Enhancements | Update failed', error);
-    ui.notifications.error(game.i18n.localize('COMBAT_ENHANCEMENTS.updateFailed'));
+    console.error('Tracker Enhancements | Update failed', error);
+    ui.notifications.error(game.i18n.localize('TRACKER_ENHANCEMENTS.updateFailed'));
   }
 }

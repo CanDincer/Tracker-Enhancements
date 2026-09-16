@@ -1,4 +1,4 @@
-const MODULE_ID = 'combat-enhancements';
+const MODULE_ID = 'tracker-enhancements';
 
 /** Resolve a fresh view model without adding properties to Foundry Documents. */
 export function getHealthData(combatant) {

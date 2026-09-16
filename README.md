@@ -1,4 +1,4 @@
-# Combat Enhancements
+# Tracker Enhancements
 
 Adds editable HP fields, health rings, and drag/drop initiative reordering to Foundry VTT's combat tracker. This fork carries compatibility repairs for the V14 tracker while retaining the V12/V13 render hook interface.
 
@@ -10,11 +10,17 @@ English is the only maintained module language. The module ships and registers o
 
 The published manifest is:
 
-https://raw.githubusercontent.com/CanDincer/Combat-Enhancements/main/module.json
+https://raw.githubusercontent.com/CanDincer/Tracker-Enhancements/main/module.json
 
-That manifest downloads `combat-enhancements.zip` from the release tagged `latest`. Merging source changes does not update that ZIP. A new release archive must be built and published before Foundry's normal installer receives these repairs.
+That manifest downloads `tracker-enhancements.zip` from the release tagged `latest`. The renamed manifest and archive become available when the rebranding release is published. Merging source changes does not update that ZIP.
 
-To try a development branch before release, download its source archive, extract it, rename the module directory to `combat-enhancements`, and place it under your Foundry user data directory's `Data/modules`. The installed directory must contain `module.json`, `module/`, `lang/`, and `styles/dist/`. Restart Foundry and enable Combat Enhancements in the world. The repository includes generated runtime assets, so a source-archive install does not require Node.js.
+To try a development branch before release, download its source archive, extract it, rename the module directory to `tracker-enhancements`, and place it under your Foundry user data directory's `Data/modules`. The installed directory must contain `module.json`, `module/`, `lang/`, and `styles/dist/`. Restart Foundry and enable Tracker Enhancements in the world. The repository includes generated runtime assets, so a source-archive install does not require Node.js.
+
+### Moving from Combat Enhancements
+
+The Foundry package ID is now `tracker-enhancements`. Foundry treats it as a separate module, so install it using the new manifest instead of updating the old package in place. In each world, disable **Combat Enhancements** and enable **Tracker Enhancements**, then log in as GM. Keep only Tracker Enhancements enabled.
+
+The active GM automatically copies the six saved world settings from `combat-enhancements` when the world is ready. Existing Tracker Enhancements settings take priority, including explicit defaults. The old settings are retained, and unsuccessful copies are retried on the next GM login. Check your settings after switching; remove the old installation when you have confirmed the new module works in your worlds.
 
 ## Health display and editing
 
@@ -30,7 +36,7 @@ GMs see health rings when enabled. **Player HP circle visibility** controls whic
 
 `encounter`, `group`, and `vehicle` can be literal actor types supplied by the game system. **Actor type: Encounter** only matches that type; choose **All combatants** to include everyone in combat. Labels use the system's translated type names when available; existing saved choices retain their meaning. Public hover/control bar modes display a ring in the tracker; owner-only modes require ownership.
 
-All Combat Enhancements settings are **world settings**, configured by the GM and shared by every player. In Monk's Player Settings, keep **View settings for Player** on your own GM account. Selecting another player or **All Players** hides these settings because that view filters out world settings; it does not change whom the settings affect. To show PCs and NPCs together, enable **Enable HP radial bar**, set **Player HP circle visibility** to **All combatants**, and save as GM.
+All Tracker Enhancements settings are **world settings**, configured by the GM and shared by every player. In Monk's Player Settings, keep **View settings for Player** on your own GM account. Selecting another player or **All Players** hides these settings because that view filters out world settings; it does not change whom the settings affect. To show PCs and NPCs together, enable **Enable HP radial bar**, set **Player HP circle visibility** to **All combatants**, and save as GM.
 
 When Bar Brawl supplies a visibility rule, that rule can still hide a ring, including in All combatants mode. A ring needs a valid HP resource and positive maximum, and the actor must be present in the player's tracker. Tokens without a canvas object are handled conservatively. Showing a ring does not grant permission to edit HP.
 

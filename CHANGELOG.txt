@@ -1,3 +1,10 @@
+# Unreleased
+
+- Rename the project and Foundry package to Tracker Enhancements (tracker-enhancements).
+- Rename runtime assets, settings and translation namespaces, CSS classes, drag data, package metadata and project URLs.
+- Copy the six saved world settings from the previous package on GM login without replacing existing new settings or deleting old settings.
+- Document the new installation path and release archive name; retain English-only localization and original author credit.
+
 # 1.4.1
 
 - Fix untranslated actor-type prefixes by building dropdown labels after translations load.

@@ -1,4 +1,5 @@
 import { JSDOM } from 'jsdom';
+import assert from 'node:assert/strict';
 
 export class Collection extends Map {
   some(fn) { return Array.from(this.values()).some(fn); }
@@ -26,10 +27,16 @@ export function environment() {
     modules: new Map(), combat: null,
     system: { documentTypes: { Actor: ['character', 'npc'] } },
     settings: {
-      get(_module, key) { return settings.get(key); },
-      register(_module, key, options) { registrations.set(key, options); },
+      get(namespace, key) {
+        assert.equal(namespace, 'tracker-enhancements');
+        return settings.get(key);
+      },
+      register(namespace, key, options) {
+        assert.equal(namespace, 'tracker-enhancements');
+        registrations.set(key, options);
+      },
     },
-    i18n: { localize(key) { return key === 'COMBAT_ENHANCEMENTS.hp.label' ? 'HP' : key; } },
+    i18n: { localize(key) { return key === 'TRACKER_ENHANCEMENTS.hp.label' ? 'HP' : key; } },
   };
   globalThis.CONFIG = { Actor: {} };
   const warnings = [], errors = [];
@@ -108,7 +115,7 @@ export function transfer(data) {
     getData(type) { return values.get(type) ?? ''; },
     setDragImage() {},
   };
-  if (data) result.setData('application/x-combat-enhancements', JSON.stringify(data));
+  if (data) result.setData('application/x-tracker-enhancements', JSON.stringify(data));
   return result;
 }
 
