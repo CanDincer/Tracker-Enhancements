@@ -4,6 +4,8 @@ Adds editable HP fields, health rings, and drag/drop initiative reordering to Fo
 
 The repair has automated regression and browser coverage. A licensed Foundry world with your game system and other modules still needs the checks in [TESTING.md](TESTING.md).
 
+English is the only maintained module language. The module ships and registers only `lang/en.json`, generated from `yaml/lang/en.yaml`.
+
 ## Installation
 
 The published manifest is:
@@ -24,9 +26,9 @@ GMs see health rings when enabled. **Player HP circle visibility** controls whic
 | --- | --- |
 | Use token visibility | Follow token Bar 1 visibility, including ownership requirements |
 | All combatants | Show every valid HP circle in the viewed tracker, including the player's own character, other PCs, and NPCs |
-| Actor type: character / npc / another type | Follow token visibility and additionally show actors of the selected type |
+| Actor type: Character / NPC / another type | Follow token visibility and additionally show actors of the selected type |
 
-`encounter`, `group`, and `vehicle` can be literal actor types supplied by the game system. **Actor type: encounter** only matches that type; choose **All combatants** to include everyone in combat. Existing saved choices retain their meaning. Public hover/control bar modes display a ring in the tracker; owner-only modes require ownership.
+`encounter`, `group`, and `vehicle` can be literal actor types supplied by the game system. **Actor type: Encounter** only matches that type; choose **All combatants** to include everyone in combat. Labels use the system's translated type names when available; existing saved choices retain their meaning. Public hover/control bar modes display a ring in the tracker; owner-only modes require ownership.
 
 All Combat Enhancements settings are **world settings**, configured by the GM and shared by every player. In Monk's Player Settings, keep **View settings for Player** on your own GM account. Selecting another player or **All Players** hides these settings because that view filters out world settings; it does not change whom the settings affect. To show PCs and NPCs together, enable **Enable HP radial bar**, set **Player HP circle visibility** to **All combatants**, and save as GM.
 
@@ -62,7 +64,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Edit translations and the manifest in `yaml/`, and styles in `styles/src/`. `npm run build` regenerates `module.json`, `lang/`, and `styles/dist/`; commit generated files with their sources. CI runs the regression suite, build, browser smoke test, and a check that generated files are current.
+Edit English text in `yaml/lang/en.yaml`, the manifest in `yaml/module.yaml`, and styles in `styles/src/`. `npm run build` regenerates `module.json`, `lang/en.json`, and `styles/dist/`; commit generated files with their sources. CI runs the regression suite, build, browser smoke test, and a check that generated files are current.
 
 See [TESTING.md](TESTING.md) for test scope and live-world verification.
 

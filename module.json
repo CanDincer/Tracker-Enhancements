@@ -8,7 +8,7 @@
       "discord": "asacolips"
     }
   ],
-  "version": "1.4.0",
+  "version": "1.4.1",
   "compatibility": {
     "minimum": "12",
     "verified": "14",
@@ -25,21 +25,6 @@
       "lang": "en",
       "name": "English",
       "path": "lang/en.json"
-    },
-    {
-      "lang": "pt-BR",
-      "name": "Português (Brasil)",
-      "path": "lang/pt-BR.json"
-    },
-    {
-      "lang": "es",
-      "name": "Español",
-      "path": "lang/es.json"
-    },
-    {
-      "lang": "ja",
-      "name": "日本語",
-      "path": "lang/ja.json"
     }
   ],
   "url": "https://github.com/CanDincer/Combat-Enhancements",

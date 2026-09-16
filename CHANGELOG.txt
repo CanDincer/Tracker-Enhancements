@@ -1,3 +1,9 @@
+# 1.4.1
+
+- Fix untranslated actor-type prefixes by building dropdown labels after translations load.
+- Use the game system's translated actor-type names when available, preserving saved setting values.
+- Maintain English only; remove Spanish, Japanese and Brazilian Portuguese files and manifest entries.
+
 # 1.4.0
 
 - Add All combatants to player HP circle visibility so owned PCs, other PCs and NPCs can be shown together.
