@@ -74,4 +74,6 @@ Edit English text in `yaml/lang/en.yaml`, the manifest in `yaml/module.yaml`, an
 
 See [TESTING.md](TESTING.md) for test scope and live-world verification.
 
+The [v1.5 health design proposal](docs/v1.5-health-design.md) covers D&D6 damage handling, separate temporary HP, and a unified tracker display. These changes are planned and are not implemented in the current release.
+
 Original module by Asacolips: [upstream project](https://gitlab.com/asacolips-projects/foundry-mods/combat-enhancements).
