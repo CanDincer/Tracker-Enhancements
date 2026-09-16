@@ -1,7 +1,7 @@
 {
   "id": "tracker-enhancements",
   "title": "Tracker Enhancements",
-  "description": "Adds health tracking and drag/drop re-ordering to the combat tracker.",
+  "description": "Adds health tracking and drag/drop re-ordering to the encounter tracker.",
   "authors": [
     {
       "name": "CanDincer"
