@@ -7,12 +7,22 @@ Hooks.once('init', function() {
   const actorTypes = game.system?.documentTypes?.Actor ?? CONFIG.Actor?.documentTypes ?? {};
   const types = Array.isArray(actorTypes) ? actorTypes : Object.keys(actorTypes);
   const choices = {
-    '': game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.tokenVisibility'),
-    '*': game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.all'),
+    '': 'COMBAT_ENHANCEMENTS.setting.showHpForType.tokenVisibility',
+    '*': 'COMBAT_ENHANCEMENTS.setting.showHpForType.all',
   };
   for (const type of types) {
-    choices[type] = `${game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.actorType')}: ${type}`;
+    choices[type] = type;
   }
+
+  // Translations load after init. Compound labels cannot be translated by the settings form.
+  Hooks.once('i18nInit', () => {
+    const prefix = game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.actorType');
+    for (const type of types) {
+      const key = CONFIG.Actor?.typeLabels?.[type] ?? `TYPES.Actor.${type}`;
+      const label = game.i18n.localize(key);
+      choices[type] = `${prefix}: ${label === key ? type : label}`;
+    }
+  });
 
   // HP disclosure is a GM-controlled world policy shared by all player clients.
   // Keep the existing setting key and actor-type values so saved choices remain valid.

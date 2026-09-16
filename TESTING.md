@@ -2,12 +2,13 @@
 
 ## Automated coverage
 
-The regression suite contains 35 tests covering:
+The regression suite contains 36 tests covering:
 
 - HP resource resolution, zero HP, invalid values, permissions, visibility, and optional Bar Brawl APIs.
 - The reported owned-PC/other-PC/NPC visibility combinations, All combatants, literal encounter/group actor types, and world-setting refreshes on player clients.
 - Native and legacy tracker roots, repeated renders, separate documents, the viewed encounter, and preservation of core control events.
 - Actor update failures, refreshes of open trackers, and settings changes.
+- Actor-type labels across the init/i18nInit lifecycle, system type-name translations, missing-label fallback, and preserved saved values.
 - Before/after initiative moves, decimal values, ties, floating-point exhaustion, stale or foreign drag data, shared groups, and active-combatant preservation.
 - Target clearing on relevant turn/round/end events without system-specific HP assumptions.
 
@@ -30,7 +31,7 @@ The implementation was checked against the official V14 APIs for [CombatTracker]
 
 Initial repair validation passed all 31 original regressions, the build, and the browser smoke test in Chromium 134. The browser test also passed with the public demo's V14.365 core stylesheet, and screenshots were inspected. GitHub Actions repeats the current regression, build, and browser checks; use its current run for the result on a particular commit.
 
-The maintainer reported live testing on 2026-09-15: absolute/relative HP edits and initiative drag/drop worked. They also reproduced the visibility limitation when PCs and NPCs were in the same encounter. Exact Foundry/system/module versions were not recorded. The new All combatants choice still needs confirmation in that world.
+The maintainer reported live testing on 2026-09-15: absolute/relative HP edits and initiative drag/drop worked. On 2026-09-16 they confirmed the desired player HP visibility, owner-only HP editing, and no observed errors, then reported merging and releasing 1.4.0. Exact Foundry/system/module versions were not recorded. The remaining reported issue was untranslated actor-type label prefixes, addressed in 1.4.1.
 
 The player selector was traced to [Monk's Player Settings](https://github.com/ironmonk108/monks-player-settings/blob/main/apps/settings-config.js). Its category preparation excludes world settings when the selected player lacks SETTINGS_MODIFY, including the All Players view. All Combat Enhancements settings use world scope and already affect all players, as defined by the [Foundry settings API](https://foundryvtt.com/api/v14/classes/foundry.helpers.ClientSettings.html#register).
 
@@ -42,6 +43,7 @@ Use a disposable encounter in your actual V14 build and game system, with a GM a
 
 | Area | Exercise | Expected result |
 | --- | --- | --- |
+| Settings labels | After loading the world, open Player HP circle visibility and inspect each option | Use token visibility, All combatants, and readable Actor type labels; no COMBAT_ENHANCEMENTS or TYPES translation keys |
 | Tracker rendering | Open sidebar, pop-out, and detached tracker; switch viewed encounters; repeatedly render or change settings | One set of module controls per row; each window operates on its own encounter |
 | Core and system controls | Use portrait ping, visibility, defeated, targeting, initiative entry, and group controls | Existing actions still work |
 | Resources | Try linked and unlinked tokens, zero HP, custom Bar 1, scalar resources, missing tokens/actors, and zero maximum | Correct editable resource; valid rings only; no errors |

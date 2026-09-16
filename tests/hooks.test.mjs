@@ -1,5 +1,6 @@
 import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { shouldClearTargets, untargetAllTokens } from '../module/removeTarget.js';
 import { CombatSidebarCe } from '../module/combat.js';
 import { environment, encounter, combatant, tracker } from './helpers.mjs';
@@ -80,4 +81,36 @@ test('visibility is a world setting and received changes refresh player trackers
   env.settings.set('showHpForType', '*');
   setting.onChange('*');
   assert.equal(app.renders, 1);
+});
+
+test('actor-type labels wait for translations and preserve saved setting values', async () => {
+  const english = JSON.parse(await readFile(new URL('../lang/en.json', import.meta.url), 'utf8'));
+  const systemLabels = {
+    'TYPES.Actor.character': 'Character', 'TYPES.Actor.encounter': 'Encounter',
+    'TYPES.Actor.group': 'Group', 'TYPES.Actor.npc': 'NPC', 'TYPES.Actor.vehicle': 'Vehicle',
+  };
+  const types = ['character', 'encounter', 'group', 'npc', 'vehicle', 'custom'];
+  game.system.documentTypes.Actor = types;
+  CONFIG.Actor.typeLabels = Object.fromEntries(types.map(type => [type, `TYPES.Actor.${type}`]));
+  let translationsReady = false;
+  game.i18n.localize = key => translationsReady ? (english[key] ?? systemLabels[key] ?? key) : key;
+  env.settings.set('showHpForType', 'npc');
+
+  await import('../module/combat-enhancements.js?translation-lifecycle');
+  await env.emit('init');
+  const setting = env.registrations.get('showHpForType');
+  assert.deepEqual(Object.keys(setting.choices), ['', '*', ...types]);
+  translationsReady = true;
+  await env.emit('i18nInit');
+
+  // Foundry also localizes each choice when rendering the settings form.
+  const labels = Object.fromEntries(Object.entries(setting.choices)
+    .map(([value, label]) => [value, game.i18n.localize(label)]));
+  assert.deepEqual(labels, {
+    '': 'Use token visibility', '*': 'All combatants',
+    character: 'Actor type: Character', encounter: 'Actor type: Encounter',
+    group: 'Actor type: Group', npc: 'Actor type: NPC', vehicle: 'Actor type: Vehicle',
+    custom: 'Actor type: custom',
+  });
+  assert.equal(game.settings.get('combat-enhancements', 'showHpForType'), 'npc');
 });
