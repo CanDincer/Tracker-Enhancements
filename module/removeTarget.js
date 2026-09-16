@@ -6,7 +6,7 @@ export function untargetAllTokens() {
 }
 
 export function shouldClearTargets(combat, changed, options = {}, deleted = false) {
-  if (!game.settings.get('combat-enhancements', 'removeTargets') || options.combatEnhancementsReorder) return false;
+  if (!game.settings.get('tracker-enhancements', 'removeTargets') || options.trackerEnhancementsReorder) return false;
   const relevant = game.combat?.id === combat.id || (combat.active
     && (!combat.scene || combat.scene.id === game.user.viewedScene));
   return Boolean(relevant && (deleted || Object.hasOwn(changed, 'turn') || Object.hasOwn(changed, 'round')));

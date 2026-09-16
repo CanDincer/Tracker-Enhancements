@@ -1,6 +1,6 @@
 {
-  "name": "combat-enhancements",
-  "version": "1.0.0",
+  "name": "tracker-enhancements",
+  "version": "1.4.1",
   "description": "Adds health tracking and drag/drop reordering.",
   "scripts": {
     "build": "gulp build",

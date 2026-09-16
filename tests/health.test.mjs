@@ -1,7 +1,7 @@
 import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getHealthData, parseHpInput } from '../module/health.js';
-import { CeUtility } from '../module/utility.js';
+import { TrackerUtility } from '../module/utility.js';
 import { environment, combatant } from './helpers.mjs';
 let env;
 beforeEach(() => { env = environment(); });
@@ -156,7 +156,7 @@ test('HP input accepts decimal absolutes and deltas and rejects malformed values
 
 test('rings clamp negative/over-max values and never produce non-finite geometry', () => {
   for (const [current, max, expected] of [[0, 20, 0], [-5, 20, 0], [30, 20, 100], [10, 20, 50], [0, 0, 0], [NaN, 20, 0]]) {
-    const circle = CeUtility.getProgressCircle({ current, max });
+    const circle = TrackerUtility.getProgressCircle({ current, max });
     assert.equal(circle.class, expected);
     assert.ok(Number.isFinite(circle.offset));
     assert.ok(circle.offset >= 0 && circle.offset <= circle.circumference);

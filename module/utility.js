@@ -1,4 +1,4 @@
-export class CeUtility {
+export class TrackerUtility {
   static getProgressCircleHtml(data) {
     return `<svg class="progress-ring progress-ring--${data.class}" aria-hidden="true" viewBox="0 0 ${data.diameter} ${data.diameter}" width="${data.diameter}" height="${data.diameter}">
       <circle class="progress-ring__circle" stroke-width="${data.strokeWidth}"

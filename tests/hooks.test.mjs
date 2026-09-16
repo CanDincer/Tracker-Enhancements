@@ -2,7 +2,7 @@ import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { shouldClearTargets, untargetAllTokens } from '../module/removeTarget.js';
-import { CombatSidebarCe } from '../module/combat.js';
+import { TrackerEnhancements } from '../module/tracker.js';
 import { environment, encounter, combatant, tracker } from './helpers.mjs';
 
 let env;
@@ -19,7 +19,7 @@ test('target removal reacts to turn/round/end, not unrelated encounter edits', (
   assert.equal(shouldClearTargets(combat, { turn: 0 }), true);
   assert.equal(shouldClearTargets(combat, { round: 0 }), true);
   assert.equal(shouldClearTargets(combat, {}, {}, true), true);
-  assert.equal(shouldClearTargets(combat, { turn: 1 }, { combatEnhancementsReorder: true }), false);
+  assert.equal(shouldClearTargets(combat, { turn: 1 }, { trackerEnhancementsReorder: true }), false);
   assert.equal(shouldClearTargets({ id: 'unrelated', active: false }, { turn: 2 }), false);
   assert.equal(shouldClearTargets({ id: 'other-scene', active: true, scene: { id: 'other' } }, {}, {}, true), false);
 });
@@ -41,7 +41,7 @@ test('target removal is system agnostic and lets Foundry manage its target set',
 });
 
 test('target removal settings can be changed after startup without reloading', async () => {
-  new CombatSidebarCe().startup();
+  new TrackerEnhancements().startup();
   const combat = encounter('active', []);
   game.combat = combat;
   let removed = 0;
@@ -60,7 +60,7 @@ test('init accepts array and object actor-type registries without legacy globals
   for (const [index, types] of [['array', ['character', 'npc']], ['object', { character: {}, npc: {} }]]) {
     env = environment();
     game.system.documentTypes.Actor = types;
-    await import(`../module/combat-enhancements.js?${index}`);
+    await import(`../module/tracker-enhancements.js?${index}`);
     await env.emit('init');
     assert.deepEqual(Object.keys(env.registrations.get('showHpForType').choices), ['', '*', 'character', 'npc']);
     assert.equal(env.registrations.get('showHpForType').default, '');
@@ -69,7 +69,7 @@ test('init accepts array and object actor-type registries without legacy globals
 });
 
 test('visibility is a world setting and received changes refresh player trackers', async () => {
-  await import('../module/combat-enhancements.js?world-visibility');
+  await import('../module/tracker-enhancements.js?world-visibility');
   await env.emit('init');
   const setting = env.registrations.get('showHpForType');
   assert.equal(setting.scope, 'world');
@@ -96,7 +96,7 @@ test('actor-type labels wait for translations and preserve saved setting values'
   game.i18n.localize = key => translationsReady ? (english[key] ?? systemLabels[key] ?? key) : key;
   env.settings.set('showHpForType', 'npc');
 
-  await import('../module/combat-enhancements.js?translation-lifecycle');
+  await import('../module/tracker-enhancements.js?translation-lifecycle');
   await env.emit('init');
   const setting = env.registrations.get('showHpForType');
   assert.deepEqual(Object.keys(setting.choices), ['', '*', ...types]);
@@ -112,5 +112,5 @@ test('actor-type labels wait for translations and preserve saved setting values'
     group: 'Actor type: Group', npc: 'Actor type: NPC', vehicle: 'Actor type: Vehicle',
     custom: 'Actor type: custom',
   });
-  assert.equal(game.settings.get('combat-enhancements', 'showHpForType'), 'npc');
+  assert.equal(game.settings.get('tracker-enhancements', 'showHpForType'), 'npc');
 });

@@ -19,15 +19,15 @@ let browser;
 try {
   browser = await chromium.launch({
     headless: true,
-    ...(process.env.CE_CHROMIUM_PATH ? { executablePath: process.env.CE_CHROMIUM_PATH } : {}),
+    ...(process.env.TE_CHROMIUM_PATH ? { executablePath: process.env.TE_CHROMIUM_PATH } : {}),
   });
   const page = await browser.newPage({ viewport: { width: 850, height: 650 } });
   const failures = [];
   page.on('pageerror', error => failures.push(error.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/tests/fixtures/tracker.html`);
   await page.waitForFunction(() => window.testHarness);
-  if (process.env.CE_CORE_CSS) await page.addStyleTag({ path: process.env.CE_CORE_CSS });
-  const hp = page.locator('[data-combatant-id="a"] .ce-modify-hp');
+  if (process.env.TE_CORE_CSS) await page.addStyleTag({ path: process.env.TE_CORE_CSS });
+  const hp = page.locator('[data-combatant-id="a"] .te-modify-hp');
 
   await hp.fill('-3');
   await hp.press('Enter');
@@ -47,7 +47,7 @@ try {
 
   for (const theme of ['dark', 'light']) {
     await page.evaluate(theme => { document.body.className = `theme-${theme}`; }, theme);
-    const overflow = await page.locator('.ce-modify-hp').evaluateAll(inputs => inputs.filter(input => {
+    const overflow = await page.locator('.te-modify-hp').evaluateAll(inputs => inputs.filter(input => {
       const field = input.getBoundingClientRect(), row = input.closest('li').getBoundingClientRect();
       return field.left < row.left || field.right > row.right || field.bottom > row.bottom;
     }).length);
@@ -66,8 +66,8 @@ try {
     testHarness.settings.set('hideNonAllyInitiative', true);
     testHarness.app.render();
   });
-  assert.equal(await page.locator('.ce-modify-hp').count(), 1);
-  assert.equal(await page.locator('.ce-hide-initiative').count(), 2);
+  assert.equal(await page.locator('.te-modify-hp').count(), 1);
+  assert.equal(await page.locator('.te-hide-initiative').count(), 2);
   assert.equal(await page.locator('[data-combatant-id="b"] .token-initiative').isVisible(), false);
 
   // Match a player's owned PC, another player's PC and an NPC with owner-only bars.
@@ -86,7 +86,7 @@ try {
     const visible = await page.locator('.progress-ring').evaluateAll(rings =>
       rings.map(ring => ring.closest('[data-combatant-id]').dataset.combatantId).sort());
     assert.deepEqual(visible, expected, `Player HP circles for ${choice || 'token visibility'}`);
-    assert.equal(await page.locator('.ce-modify-hp').count(), 1);
+    assert.equal(await page.locator('.te-modify-hp').count(), 1);
   }
   assert.deepEqual(await page.evaluate(() => testHarness.errors), []);
   assert.deepEqual(failures, []);

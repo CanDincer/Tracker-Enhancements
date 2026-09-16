@@ -1,4 +1,4 @@
-import { CombatSidebarCe } from '../../module/combat.js';
+import { TrackerEnhancements } from '../../module/tracker.js';
 
 const settings = new Map(Object.entries({
   enableHpField: true, enableHpRadial: true, showHpForType: '', enableInitReflow: false,
@@ -18,7 +18,7 @@ globalThis.ui = { notifications: { warn(message) { warnings.push(message); }, er
 globalThis.game = {
   user: { isGM: true, targets: new Set() }, modules: new Map(),
   settings: { get(_module, key) { return settings.get(key); } },
-  i18n: { localize(key) { return key === 'COMBAT_ENHANCEMENTS.hp.label' ? 'HP' : key; } },
+  i18n: { localize(key) { return key === 'TRACKER_ENHANCEMENTS.hp.label' ? 'HP' : key; } },
 };
 
 const members = ['a', 'b', 'c'].map((id, index) => {
@@ -55,7 +55,7 @@ const combat = {
 };
 members.forEach(c => { c.parent = combat; });
 game.combat = combat;
-const sidebar = new CombatSidebarCe();
+const sidebar = new TrackerEnhancements();
 const root = document.querySelector('.combat-sidebar');
 const app = {
   viewed: combat, rendered: true,
