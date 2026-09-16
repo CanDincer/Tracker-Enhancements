@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "description": "Adds health tracking and drag/drop reordering.",
   "scripts": {
-    "build": "gulp yaml & gulp css",
+    "build": "gulp build",
     "compile": "gulp css",
     "watch": "gulp",
     "gulp": "gulp",
-    "yaml": "gulp yaml"
+    "yaml": "gulp yaml",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser-smoke.mjs"
   },
   "browserslist": [
     "last 3 versions"
@@ -23,5 +25,9 @@
     "gulp-sourcemaps": "^3.0.0",
     "gulp-yaml": "^2.0.4",
     "sass": "^1.52.1"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0",
+    "playwright": "1.63.0"
   }
 }

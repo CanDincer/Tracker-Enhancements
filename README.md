@@ -1,36 +1,69 @@
 # Combat Enhancements
 
-![Foundry v14](https://img.shields.io/badge/foundry-v14-green)
+Adds editable HP fields, health rings, and drag/drop initiative reordering to Foundry VTT's combat tracker. This fork carries compatibility repairs for the V14 tracker while retaining the V12/V13 render hook interface.
 
-This small module adds a radial health bar, an editable HP field, and drag/drop re-ordering to the combat tracker.
-
-Compatible with Foundry VTT 10 through 14.
+The repair has automated regression and browser coverage. A licensed Foundry world with your game system and other modules still needs the checks in [TESTING.md](TESTING.md).
 
 ## Installation
 
-Install using the module browser in Foundry or via this manifest URL: [https://raw.githubusercontent.com/CanDincer/Combat-Enhancements/refs/heads/main/module.json](https://raw.githubusercontent.com/CanDincer/Combat-Enhancements/refs/heads/main/module.json)
-## Usage
+The published manifest is:
 
-### Radial Health Bars
+https://raw.githubusercontent.com/CanDincer/Combat-Enhancements/main/module.json
 
-The radial health bars will appear automatically if you're a GM user. For players, the health bar will only appear if the user is either the owner of the combatant's token or if the token's bar visibility is set to something other than one of the "owner" options.
+That manifest downloads `combat-enhancements.zip` from the release tagged `latest`. Merging source changes does not update that ZIP. A new release archive must be built and published before Foundry's normal installer receives these repairs.
 
-The module will attempt to use the `system.attributes.hp` field on the actor, but this can be overridden by changing the attribute associated with Bar 1 in the token settings.
+To try a development branch before release, download its source archive, extract it, rename the module directory to `combat-enhancements`, and place it under your Foundry user data directory's `Data/modules`. The installed directory must contain `module.json`, `module/`, `lang/`, and `styles/dist/`. Restart Foundry and enable Combat Enhancements in the world. The repository includes generated runtime assets, so a source-archive install does not require Node.js.
 
-### Health Modification
+## Health display and editing
 
-For GM users, all combatants will have an HP input that lets them modify it using absolute numbers or relative numbers (such as `-10` or `+3`).
+The module uses the token's Bar 1 resource, falling back to `system.attributes.hp` when no resource is configured. Both scalar values and `{value, max}` resources are supported for editing. A health ring needs a finite value and positive maximum; zero HP is valid.
 
-Players will only be able to edit HP if they own the combatant's token.
+GMs see health rings when enabled. **Player HP circle visibility** controls which rings players see:
 
-### Drag/drop Re-ordering
+| Choice | Player display |
+| --- | --- |
+| Use token visibility | Follow token Bar 1 visibility, including ownership requirements |
+| All combatants | Show every valid HP circle in the viewed tracker, including the player's own character, other PCs, and NPCs |
+| Actor type: character / npc / another type | Follow token visibility and additionally show actors of the selected type |
 
-The module also includes the ability to rearrange combatants by dragging and dropping them. This is handled by setting the combatant being dragged to a new initiative that's the average of the two combatants it's landing in-between. This means that if you're using dexterity tie-breakers, the tiebreaker will become a number much higher than possible dexterity scores due to the average math.
+`encounter`, `group`, and `vehicle` can be literal actor types supplied by the game system. **Actor type: encounter** only matches that type; choose **All combatants** to include everyone in combat. Existing saved choices retain their meaning. Public hover/control bar modes display a ring in the tracker; owner-only modes require ownership.
 
-If you're not using dexterity tie breakers, the module includes an optional setting to reflow combatant initiative if the combatants have identical initiative. For example, if you drop a combatant on top of another combatant that has an initiative of 18 and the combatant after that one has an 18 as well, the combatants will have new initiatives equal to 20, 19, and 18. If this setting isn't enabled, the combatants won't appear to change since the order is initiative followed by the alphabetical name.
+All Combat Enhancements settings are **world settings**, configured by the GM and shared by every player. In Monk's Player Settings, keep **View settings for Player** on your own GM account. Selecting another player or **All Players** hides these settings because that view filters out world settings; it does not change whom the settings affect. To show PCs and NPCs together, enable **Enable HP radial bar**, set **Player HP circle visibility** to **All combatants**, and save as GM.
 
-### End of Turn Target Removal
+When Bar Brawl supplies a visibility rule, that rule can still hide a ring, including in All combatants mode. A ring needs a valid HP resource and positive maximum, and the actor must be present in the player's tracker. Tokens without a canvas object are handled conservatively. Showing a ring does not grant permission to edit HP.
 
-When enabled, this will remove all targets from all tokens when the turn/round is updated in the combat tracker. Going backwards, forwards, and ending combat will cause all targets to be removed from all tokens. This is system agnostic. Enabling will cause a refresh of all connected clients.
+HP fields require permission to update the actor. Enter an absolute value such as `20` or a signed adjustment such as `-5` or `+3`. Enter or leaving the field saves; Escape cancels. Blank and malformed values are rejected. The game system remains responsible for its own HP limits and update rules.
 
-#### ***Note! This is in direct conflict with other target removal modules like Midi-QoL. For this reason it is off by default.***
+Each tracker edits its own viewed encounter, including pop-outs and detached windows. Core portrait actions, initiative fields, and system controls remain available. Actor and token updates refresh open trackers.
+
+## Initiative reordering
+
+GMs can drag a combatant's portrait or row. Drop on the top half of a row to insert before it, or on the bottom half to insert after it. Roll all initiatives first.
+
+Ordinary moves assign a value between neighboring initiatives and preserve decimal tie breakers. If no numeric gap exists, enable initiative reflow to renumber the entire encounter in the requested order. Reflow replaces existing initiative values, including decimal tie breakers. Reordering preserves the active combatant and suppresses turn events.
+
+For V14 combatants with shared group initiative, use the core or system group controls. Individual member drags and reflows that would overwrite shared group initiatives are rejected with an explanation. Custom turn orders that do not sort by descending initiative are also left to their system controls.
+
+## Other settings
+
+- **Hide non-ally initiative:** hides initiative controls for non-friendly combatants on player clients. This is a visual preference, not a restriction on document data access.
+- **Remove targets:** clears the user's targets on relevant turn/round changes and encounter deletion. It does not clear them for unrelated encounter edits or initiative reordering. This setting takes effect without reloading and does not assume a system-specific HP path.
+- HP fields, health rings, and initiative reflow can each be configured separately.
+
+## Development
+
+Use Node.js 22 or newer:
+
+```sh
+npm ci
+npm test
+npm run build
+npx playwright install chromium
+npm run test:browser
+```
+
+Edit translations and the manifest in `yaml/`, and styles in `styles/src/`. `npm run build` regenerates `module.json`, `lang/`, and `styles/dist/`; commit generated files with their sources. CI runs the regression suite, build, browser smoke test, and a check that generated files are current.
+
+See [TESTING.md](TESTING.md) for test scope and live-world verification.
+
+Original module by Asacolips: [upstream project](https://gitlab.com/asacolips-projects/foundry-mods/combat-enhancements).

@@ -1,48 +1,23 @@
 export class CeUtility {
-  static registerHelpers() {
-    Handlebars.registerHelper('progressCircle', function(data) {
-      return CeUtility.getProgressCircleHtml(data);
-    });
-  }
-
   static getProgressCircleHtml(data) {
-    return `<svg class="progress-ring progress-ring--${data.class}" viewBox="0 0 ${data.diameter} ${data.diameter}" width="${data.diameter}" height="${data.diameter}">
-      <circle
-        class="progress-ring__circle"
-        stroke-width="${data.strokeWidth}"
-        stroke-dasharray="${data.circumference}"
-        stroke-dashoffset="${data.offset}"
-        stroke="${data.color}"
-        fill="transparent"
-        r="${data.radius}"
-        cx="${data.position}"
-        cy="${data.position}"
-      />
+    return `<svg class="progress-ring progress-ring--${data.class}" aria-hidden="true" viewBox="0 0 ${data.diameter} ${data.diameter}" width="${data.diameter}" height="${data.diameter}">
+      <circle class="progress-ring__circle" stroke-width="${data.strokeWidth}"
+        stroke-dasharray="${data.circumference}" stroke-dashoffset="${data.offset}"
+        fill="transparent" r="${data.radius}" cx="${data.position}" cy="${data.position}" />
     </svg>`;
   }
 
-  static getProgressCircle({ current = 100, max = 100, radius = 16 }) {
-    let circumference = radius * 2 * Math.PI;
-    let percent = current < max ? current / max : 1;
-    let percentNumber = percent * 100;
-    let offset = circumference - (percent * circumference);
-    let strokeWidth = 4;
-    let diameter = (radius * 2) + strokeWidth;
-    let colorClass = Math.round((percent * 100) / 10) * 10;
-
+  static getProgressCircle({ current = 0, max = 0, radius = 16 } = {}) {
+    const circumference = radius * 2 * Math.PI;
+    const percent = Number.isFinite(current) && Number.isFinite(max) && max > 0
+      ? Math.min(1, Math.max(0, current / max)) : 0;
+    const strokeWidth = 4;
+    const diameter = (radius * 2) + strokeWidth;
     return {
-      radius: radius,
-      diameter: diameter,
-      strokeWidth: strokeWidth,
-      circumference: circumference,
-      offset: offset,
+      radius, diameter, strokeWidth, circumference,
+      offset: circumference * (1 - percent),
       position: diameter / 2,
-      color: 'red',
-      class: colorClass,
+      class: Math.round(percent * 10) * 10,
     };
-  }
-
-  static isLegacyVersion() {
-    return game?.release?.version?.startsWith('12');
   }
 }

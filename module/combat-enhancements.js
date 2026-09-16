@@ -1,26 +1,30 @@
 import { CombatSidebarCe } from './combat.js';
-import { CeUtility } from './utility.js';
 
-Hooks.once('init', async function() {
-  CeUtility.registerHelpers();
+Hooks.once('init', function() {
+  const combatSidebar = new CombatSidebarCe();
+  const refresh = () => combatSidebar.refreshTrackers();
 
-  // TODO: Determine a good way to localize this.
   const actorTypes = game.system?.documentTypes?.Actor ?? CONFIG.Actor?.documentTypes ?? {};
-  let types = Object.keys(actorTypes);
-  let choices = {
-    '': '—'
+  const types = Array.isArray(actorTypes) ? actorTypes : Object.keys(actorTypes);
+  const choices = {
+    '': game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.tokenVisibility'),
+    '*': game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.all'),
   };
-  for (let type of types) {
-    choices[type] = type;
+  for (const type of types) {
+    choices[type] = `${game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.actorType')}: ${type}`;
   }
 
+  // HP disclosure is a GM-controlled world policy shared by all player clients.
+  // Keep the existing setting key and actor-type values so saved choices remain valid.
   game.settings.register('combat-enhancements', 'showHpForType', {
     name: game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHpForType.label'),
+    hint: game.i18n.localize('COMBAT_ENHANCEMENTS.setting.showHPForType.description'),
     scope: 'world',
     config: true,
-    default: null,
+    default: '',
     type: String,
     choices: choices,
+    onChange: refresh,
   });
 
   game.settings.register('combat-enhancements', 'enableInitReflow', {
@@ -39,6 +43,7 @@ Hooks.once('init', async function() {
     config: true,
     default: true,
     type: Boolean,
+    onChange: refresh,
   });
 
   game.settings.register('combat-enhancements', 'enableHpRadial', {
@@ -48,6 +53,7 @@ Hooks.once('init', async function() {
     config: true,
     default: true,
     type: Boolean,
+    onChange: refresh,
   });
 
   game.settings.register('combat-enhancements', 'removeTargets', {
@@ -57,7 +63,6 @@ Hooks.once('init', async function() {
     config: true,
     default: false,
     type: Boolean,
-    onChange: () => location.reload(),
   });
 
   game.settings.register('combat-enhancements', 'hideNonAllyInitiative', {
@@ -67,8 +72,8 @@ Hooks.once('init', async function() {
     config: true,
     default: false,
     type: Boolean,
+    onChange: refresh,
   });
 
-  let combatSidebar = new CombatSidebarCe();
   combatSidebar.startup();
 });
