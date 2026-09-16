@@ -1,4 +1,4 @@
-# Unreleased - V14 repair
+# 1.4.0
 
 - Add All combatants to player HP circle visibility so owned PCs, other PCs and NPCs can be shown together.
 - Clarify literal actor-type choices and world settings in Monk's Player Settings; retain saved choices and HP edit permissions.
