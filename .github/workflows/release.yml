@@ -1,0 +1,55 @@
+name: Package release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to package (for example v1.5.1)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Keep packaging helper when rebuilding older tags
+        run: cp scripts/package-release.py "$RUNNER_TEMP/package-release.py"
+      - name: Check out the exact release tag
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Check that the release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Create ZIP and release manifest
+        run: python3 "$RUNNER_TEMP/package-release.py" --tag "$RELEASE_TAG" --repository "$GITHUB_REPOSITORY"
+      - name: Attach assets to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$RELEASE_TAG" dist/tracker-enhancements.zip dist/module.json --repo "$GITHUB_REPOSITORY" --clobber

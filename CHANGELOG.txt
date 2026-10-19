@@ -1,4 +1,9 @@
-# 1.5.1 (test candidate)
+# Unreleased
+
+- Build and attach tracker-enhancements.zip and a matching module.json automatically when a GitHub release is published. Allow manual packaging of existing releases.
+- Use stable release-asset URLs for Foundry updates and exact tag URLs for each archive. Verify tag/version consistency and runtime package contents before upload.
+
+# 1.5.1
 
 - Treat D&D's empty Temp HP value (null) as zero in the tracker without rewriting actor data. GMs and owners retain both health editors, and friendly Observers see Temp 0.
 - Preserve hidden enemy numbers and omit health fields/arcs for combatants without HP.
