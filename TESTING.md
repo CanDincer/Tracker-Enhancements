@@ -6,6 +6,7 @@ The regression suite covers:
 
 - D&D 6 API arguments and HP/Temp outcomes, full Temp damage overflow, zero Temp damage, absolute corrections, healing caps, non-stacking grant totals, hook cancellation, unavailable APIs, and over-maximum source corrections.
 - Independent arc fractions, modified/zero maxima, numeric ownership/friendliness rules, reversible native resource deduplication, pending saves across windows, preserved drafts, and coalesced item/effect refreshes.
+- Empty Temp HP (null) for GMs, owners and Observers, mixed empty/numeric pools, and combatants without HP. Rendering never writes a replacement Temp value to actor data.
 
 - HP resource resolution, zero HP, invalid values, permissions, visibility, and optional Bar Brawl APIs.
 - The reported owned-PC/other-PC/NPC visibility combinations, All combatants, literal encounter/group actor types, and world-setting refreshes on player clients.
@@ -29,7 +30,7 @@ git diff --exit-code -- module.json lang styles/dist
 
 An existing compatible Chromium executable can be selected with `TE_CHROMIUM_PATH`. Set `TE_CORE_CSS` to a locally available Foundry core CSS file to repeat the layout checks with that stylesheet.
 
-## Focused 1.5.0 test pass
+## Focused 1.5 health test pass
 
 The public API baseline was rechecked against [D&D 6.0.5](https://github.com/foundryvtt/dnd5e/tree/release-6.0.5) on 2026-09-25. Local validation passed 73 regression/API-contract tests, the build, and the browser suite in Chromium 133, both with the fixture stylesheet and with the available public-demo V14.365 core stylesheet. Screenshots were reviewed. The older stylesheet check is a layout reference; it does not replace live testing on Foundry 14.367 or newer. Automated D&D fixtures model the public contract; they do not run the full system. Record your exact Foundry build, D&D 6.0.x patch, and enabled modules when reporting the live results.
 
@@ -40,6 +41,8 @@ Use a disposable encounter with an owned PC, another friendly PC with Observer a
 | Start at 100/120 HP + 20 Temp; enter `-25` in Temp | 95 HP / 0 Temp, exactly one damage event |
 | Reset; enter `-5` in HP | 100 HP / 15 Temp; regular HP is unchanged |
 | At zero Temp, enter `-5` in Temp | 5 damage to regular HP |
+| Clear Temp on the actor sheet, leaving it blank/null; inspect as GM and owner | Both HP and Temp remain editable; Temp shows 0. Rendering does not rewrite the actor |
+| Inspect a combatant without HP | No health numbers, editors, or arcs |
 | Enter absolute HP `95`, Temp `10`, Temp `0` | Set only the selected pool; clearing Temp does not damage HP |
 | Enter Temp `+3` while Temp is 20 | 23 Temp; no regular-HP healing |
 | Heal above the effective maximum; apply/remove positive and negative maximum modifiers | HP respects the effective cap; both arcs rescale; no extra healing/damage caused by rendering |
@@ -92,6 +95,6 @@ Use a disposable encounter in your actual V14 build and game system, with a GM a
 
 ## Packaging
 
-The branch manifest and npm metadata are version 1.5.0. Run the validation commands, then package `module.json` at the archive root together with `module/`, `lang/`, and `styles/dist/`. CI uploads these runtime files as an installable test artifact. A source-archive install also works because generated assets are committed. Keep development dependencies and tests out of a release archive.
+The branch manifest and npm metadata are version 1.5.1. Run the validation commands, then package `module.json` at the archive root together with `module/`, `lang/`, and `styles/dist/`. CI uploads these runtime files as an installable test artifact. A source-archive install also works because generated assets are committed. Keep development dependencies and tests out of a release archive.
 
 Complete the live checks before publishing the release. The current manifest's download URL points to the literal release tag `latest` and asset name `tracker-enhancements.zip`. Update the published manifest and its corresponding archive together. Keep the old published `combat-enhancements.zip` asset intact for existing installations until their users switch; the new package is installed separately. Finally, install through the new manifest into a clean test world and repeat an HP edit and initiative move. A source merge alone does not update an existing release asset.

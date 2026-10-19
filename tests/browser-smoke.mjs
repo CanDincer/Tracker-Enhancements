@@ -140,9 +140,23 @@ try {
   assert.equal(await page.evaluate(() => testHarness.members[0].actor.system._source.attributes.hp.value), 140);
 
   for (const gm of [true, false]) {
-    await page.evaluate(gm => { game.user.isGM = gm; testHarness.app.render(); }, gm);
+    await page.evaluate(gm => {
+      game.user.isGM = gm;
+      for (const c of testHarness.members) {
+        c.actor.system._source.attributes.hp.temp = null;
+        c.actor.prepareHealth();
+      }
+      testHarness.app.render();
+    }, gm);
     assert.equal(await page.locator('.te-health-input').count(), gm ? 6 : 2);
     assert.equal(await page.locator('.te-health-value').count(), gm ? 0 : 2);
+    assert.equal(await temp.inputValue(), '0', 'Empty Temp remains editable for GM and owner');
+    assert.equal(await page.evaluate(() => testHarness.members[0].actor.system._source.attributes.hp.temp), null,
+      'Rendering does not rewrite empty Temp');
+    const beforeDamage = await page.evaluate(() => testHarness.members[0].actor.system.attributes.hp.value);
+    await temp.fill('-5'); await temp.press('Enter');
+    await page.waitForFunction(value => testHarness.members[0].actor.system.attributes.hp.value === value, beforeDamage - 5);
+    assert.equal(await temp.inputValue(), '0');
     assert.equal(await page.locator('.token-resource').count(), 0);
     if (!gm) assert.equal(await page.locator('[data-combatant-id="c"] .te-health-fields').count(), 0);
     for (const theme of ['dark', 'light']) {
@@ -159,7 +173,7 @@ try {
   assert.equal(await page.locator('.token-resource').count(), 3, 'Unrelated native AC remains present');
   assert.deepEqual(await page.evaluate(() => testHarness.errors), []);
   assert.deepEqual(failures, []);
-  console.log('Browser smoke passed: generic and D&D health edits, Temp overflow, drafts/cancel, two themes and roles, native resource deduplication, modifiers, core controls, drag/drop, active turn and player visibility.');
+  console.log('Browser smoke passed: generic and D&D health edits, empty Temp for GM/owner, Temp overflow, drafts/cancel, two themes and roles, native resource deduplication, modifiers, core controls, drag/drop, active turn and player visibility.');
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));

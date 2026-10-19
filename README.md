@@ -2,7 +2,7 @@
 
 Adds editable HP fields, health rings, and drag/drop initiative reordering to Foundry VTT's combat tracker. This fork carries compatibility repairs for the V14 tracker while retaining the V12/V13 render hook interface.
 
-Version 1.5.0 adds D&D 6 health handling on Foundry 14.367 or newer. This branch is a test candidate awaiting live-world validation. The implementation has automated regression and browser coverage. A licensed Foundry world with your game system and other modules still needs the checks in [TESTING.md](TESTING.md).
+Version 1.5 adds D&D 6 health handling on Foundry 14.367 or newer. The 1.5.1 test candidate fixes empty Temp HP disabling health editors. The implementation has automated regression and browser coverage. A licensed Foundry world with your game system and other modules still needs the checks in [TESTING.md](TESTING.md).
 
 English is the only maintained module language. The module ships and registers only `lang/en.json`, generated from `yaml/lang/en.yaml`.
 
@@ -12,7 +12,7 @@ The published manifest is:
 
 https://raw.githubusercontent.com/CanDincer/Tracker-Enhancements/main/module.json
 
-That manifest downloads `tracker-enhancements.zip` from the release tagged `latest`. Merging source changes does not update that ZIP. Until 1.5.0 is released, install the PR branch archive or its GitHub Actions test artifact using the development instructions below.
+That manifest downloads `tracker-enhancements.zip` from the release tagged `latest`. Merging source changes does not update that ZIP. Until 1.5.1 is released, install the PR branch archive or its GitHub Actions test artifact using the development instructions below.
 
 To try a development branch before release, download its source archive, extract it, rename the module directory to `tracker-enhancements`, and place it under your Foundry user data directory's `Data/modules`. The installed directory must contain `module.json`, `module/`, `lang/`, and `styles/dist/`. Restart Foundry and enable Tracker Enhancements in the world. The repository includes generated runtime assets, so a source-archive install does not require Node.js.
 
