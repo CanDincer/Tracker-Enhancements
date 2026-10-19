@@ -46,7 +46,9 @@ export function getHealthData(combatant) {
   }
 
   const hp = dnd5e ? actor.system.attributes?.hp : null;
-  const temp = hp?.temp;
+  // D&D permits an empty Temp field (null). It is an empty pool, not a reason
+  // to hide Temp or disable both editors. Normalize the view without writing.
+  const temp = hp?.temp === null ? 0 : hp?.temp;
   if (dnd5e) {
     // D&D's token bar adds Temp to HP. Neither Bar Brawl nor that combined value
     // may replace the independent pools or the system's prepared maximum.

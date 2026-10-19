@@ -75,6 +75,79 @@ test('negative Temp with an empty pool is damage, while signed zero is a no-op',
   assert.equal(c.actor.updates.length, 1);
 });
 
+for (const gm of [true, false]) {
+  test(`${gm ? 'GM' : 'owner'} can edit both pools when Temp is null`, async () => {
+    const c = member('a', { temp: null });
+    game.user.isGM = gm;
+    c.actor.isOwner = !gm;
+    c.token.displayBars = CONST.TOKEN_DISPLAY_MODES.OWNER;
+    const { root, app, sidebar } = rendered(c);
+    assert.equal(root.querySelectorAll('.te-health-input').length, 2);
+    assert.equal(root.querySelectorAll('.te-health-value').length, 0);
+    const input = root.querySelector('.te-modify-temp');
+    assert.equal(input.value, '0');
+    assert.equal(root.querySelector('.te-temp-arc').getAttribute('stroke-dasharray'), '0 100');
+    assert.equal(c.actor.system._source.attributes.hp.temp, null, 'Rendering must not rewrite actor data');
+    assert.equal(c.actor.updates.length, 0);
+    input.value = '-5';
+    await sidebar.updateHp(app, input);
+    assert.equal(c.actor.system.attributes.hp.value, 95);
+    assert.equal(c.actor.system.attributes.hp.temp, 0);
+    assert.deepEqual(c.actor.apiCalls, [{ attribute: 'attributes.hp', value: -5, isDelta: true, isBar: true }]);
+    c.actor.system._source.attributes.hp.temp = null;
+    c.actor.prepareHealth();
+    input.value = '+4';
+    await sidebar.updateHp(app, input);
+    assert.equal(c.actor.system.attributes.hp.temp, 4);
+    assert.equal(c.actor.system.attributes.hp.value, 95);
+  });
+}
+
+test('a mixed encounter keeps numeric, zero, and empty Temp pools editable for the GM', () => {
+  const members = [0, 13, null].map((temp, i) => member(`mixed-${i}`, { temp }));
+  const view = tracker(encounter('mixed', members));
+  new TrackerEnhancements().renderTracker(view.app, view.root);
+  assert.equal(view.root.querySelectorAll('.te-health-input').length, 6);
+  assert.deepEqual(Array.from(view.root.querySelectorAll('.te-modify-temp'), input => input.value), ['0', '13', '0']);
+  for (const c of members) assert.equal(c.actor.updates.length, 0);
+});
+
+test('empty Temp retains friendly Observer read access and hides unowned enemy numbers', () => {
+  game.user.isGM = false;
+  for (const disposition of [1, 0, -1]) {
+    const c = member('a', { temp: null });
+    c.actor.observer = true;
+    c.token.disposition = disposition;
+    const { root } = rendered(c);
+    assert.equal(root.querySelectorAll('.te-health-input').length, 0);
+    assert.equal(root.querySelectorAll('.te-health-value').length, disposition === 1 ? 2 : 0);
+    if (disposition === 1) assert.equal(root.querySelector('[data-te-pool="temp"]').textContent, '0');
+  }
+});
+
+test('invalid or missing Temp data still prevent editing', () => {
+  for (const temp of [-1, 1.5, NaN, '0', undefined]) {
+    const c = member();
+    c.actor.system.attributes.hp.temp = temp;
+    assert.equal(getHealthData(c).editable, false);
+  }
+});
+
+test('combatants without HP keep all health numbers, editors, and arcs absent', () => {
+  for (const hp of [undefined, { value: null, max: null, effectiveMax: null, temp: null }]) {
+    const c = member();
+    c.actor.system.attributes.hp = hp;
+    c.token.getBarAttribute = () => null;
+    const view = tracker(encounter('no-hp', [c]));
+    new TrackerEnhancements().renderTracker(view.app, view.root);
+    assert.equal(view.root.querySelectorAll('.te-health-fields, .progress-ring').length, 0);
+    assert.equal(c.actor.updates.length, 0);
+  }
+  const c = member();
+  c.actor = null;
+  assert.equal(getHealthData(c), null);
+});
+
 test('D&D rejects fractions, malformed values and unsafe integers before any update', () => {
   for (const input of ['', ' ', '1.5', '-.5', '2.0', '1e2', 'NaN', 'Infinity', '--2', '9007199254740992']) {
     assert.equal(parseHealthOperation(input, true), null, input);

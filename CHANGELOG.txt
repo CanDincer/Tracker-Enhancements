@@ -1,4 +1,10 @@
-# 1.5.0 (test candidate)
+# 1.5.1 (test candidate)
+
+- Treat D&D's empty Temp HP value (null) as zero in the tracker without rewriting actor data. GMs and owners retain both health editors, and friendly Observers see Temp 0.
+- Preserve hidden enemy numbers and omit health fields/arcs for combatants without HP.
+- Add regression and browser coverage for empty Temp, including damage/healing through the system APIs.
+
+# 1.5.0
 
 - Use D&D 6 modifyTokenAttribute/applyDamage for damage, healing, and Temp grants; use scalar attribute operations for absolute corrections.
 - Negative entries in either HP or Temp apply full damage, including overflow into HP. Keep the two pools independent for absolute assignments.
