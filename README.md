@@ -2,7 +2,7 @@
 
 Adds editable HP fields, health rings, and drag/drop initiative reordering to Foundry VTT's combat tracker. This fork carries compatibility repairs for the V14 tracker while retaining the V12/V13 render hook interface.
 
-Version 1.5 adds D&D 6 health handling on Foundry 14.367 or newer. Version 1.5.1 fixes empty Temp HP disabling health editors. The implementation has automated regression and browser coverage. A licensed Foundry world with your game system and other modules still needs the checks in [TESTING.md](TESTING.md).
+Version 1.5 adds D&D 6 health handling on Foundry 14.367 or newer. Version 1.5.1 fixes empty Temp HP disabling health editors; the 1.5.2 candidate also saves restored drafts on blur and automates release packaging. The implementation has automated regression and browser coverage. A licensed Foundry world with your game system and other modules still needs the checks in [TESTING.md](TESTING.md).
 
 English is the only maintained module language. The module ships and registers only `lang/en.json`, generated from `yaml/lang/en.yaml`.
 
@@ -103,7 +103,7 @@ Local packaging uses Python 3, with no extra Python packages:
 npm ci
 npm run build
 python3 -m unittest discover -s tests -p 'test_release_*.py' -v
-python3 scripts/package-release.py --tag v1.5.1 --repository CanDincer/Tracker-Enhancements
+python3 scripts/package-release.py --tag v1.5.2 --repository CanDincer/Tracker-Enhancements
 ```
 
 The two files are written to `dist/`. Only runtime files are included, with `module.json` directly at the ZIP root.

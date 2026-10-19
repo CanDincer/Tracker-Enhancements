@@ -313,6 +313,37 @@ test('uncommitted drafts survive unrelated rerenders and are discarded on encoun
   assert.equal(root.querySelector('.te-modify-temp').value, '20');
 });
 
+test('a restored draft waits for real blur and saves without a native change event', async () => {
+  const { root, app, sidebar, dom, c } = rendered();
+  let input = root.querySelector('.te-modify-temp');
+  input.focus(); input.value = '-25';
+  input.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  sidebar.renderTracker(app, root);
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(c.actor.apiCalls.length, 0, 'Replacing the input must not apply the unfinished draft');
+  input = root.querySelector('.te-modify-temp');
+  assert.equal(input.value, '-25');
+  input.blur();
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(c.actor.apiCalls.length, 1);
+  assert.equal(c.actor.system.attributes.hp.value, 95);
+  assert.equal(c.actor.system.attributes.hp.temp, 0);
+  assert.equal(sidebar.getDrafts(app).size, 0);
+});
+
+test('native change and blur of the same draft apply damage only once', async () => {
+  const { root, sidebar, dom, c } = rendered();
+  const input = root.querySelector('.te-modify-temp');
+  input.focus(); input.value = '-25';
+  input.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  input.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  input.blur();
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(c.actor.apiCalls.length, 1);
+  assert.equal(c.actor.system.attributes.hp.value, 95);
+  assert.equal(c.actor.system.attributes.hp.temp, 0);
+});
+
 test('item and effect changes coalesce and refresh every open tracker, including synthetic actors', async () => {
   const { sidebar, c, app, combat } = rendered();
   c.actor.uuid = 'Scene.scene.Token.token.Actor.actor';

@@ -6,6 +6,7 @@ The regression suite covers:
 
 - D&D 6 API arguments and HP/Temp outcomes, full Temp damage overflow, zero Temp damage, absolute corrections, healing caps, non-stacking grant totals, hook cancellation, unavailable APIs, and over-maximum source corrections.
 - Independent arc fractions, modified/zero maxima, numeric ownership/friendliness rules, reversible native resource deduplication, pending saves across windows, preserved drafts, and coalesced item/effect refreshes.
+- Restored drafts save on a real blur without a native change event; input replacement never applies unfinished damage, and change plus blur cannot apply damage twice.
 - Empty Temp HP (null) for GMs, owners and Observers, mixed empty/numeric pools, and combatants without HP. Rendering never writes a replacement Temp value to actor data.
 
 - HP resource resolution, zero HP, invalid values, permissions, visibility, and optional Bar Brawl APIs.
@@ -96,7 +97,7 @@ Use a disposable encounter in your actual V14 build and game system, with a GM a
 
 ## Packaging
 
-The branch manifest and npm metadata are version 1.5.1. `scripts/package-release.py` packages `module.json` at the archive root together with `module/`, `lang/`, and `styles/dist/`. Its tests verify matching standalone/archived manifests, exact-tag download URLs, tag/version mismatches, missing assets, excluded development files, repeatable ZIP bytes, and prerelease tags. Validate CI runs these tests and packages the current source as well as uploading its existing runtime test artifact.
+The branch manifest and npm metadata are version 1.5.2. `scripts/package-release.py` packages `module.json` at the archive root together with `module/`, `lang/`, and `styles/dist/`. Its tests verify matching standalone/archived manifests, exact-tag download URLs, tag/version mismatches, missing assets, excluded development files, repeatable ZIP bytes, and prerelease tags. Validate CI runs these tests and packages the current source as well as uploading its existing runtime test artifact.
 
 Complete the live checks before publishing the release. The **Package release** workflow builds the published tag and uploads `tracker-enhancements.zip` plus its matching `module.json`. Use the stable manifest at `https://github.com/CanDincer/Tracker-Enhancements/releases/latest/download/module.json`. Each uploaded manifest pins its ZIP to the exact release tag. Publishing starts the workflow; drafts do not. Existing releases can be packaged through the manual workflow with their tag after the workflow is merged to main.
 
