@@ -16,6 +16,14 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: Test release packaging
+        run: python3 -m unittest discover -s tests -p 'test_release_*.py' -v
+      - name: Verify an installable release archive
+        env:
+          PACKAGE_REPOSITORY: ${{ github.repository }}
+        run: |
+          PACKAGE_VERSION="$(node -p "require('./module.json').version")"
+          python3 scripts/package-release.py --tag "v$PACKAGE_VERSION" --repository "$PACKAGE_REPOSITORY"
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - name: Check generated files are current

@@ -236,8 +236,13 @@ export class TrackerEnhancements {
       const draft = input && this.getDrafts(state.app).get(this.inputKey(input));
       // Chromium can blur/change a focused input while core replaces the DOM.
       // Keep that draft focused for its replacement; a real user blur stays connected.
+      // Restored values do not mark a new input dirty, so blur must also save
+      // drafts without a native change event. An already-handled draft is skipped.
       if (draft) queueMicrotask(() => {
-        if (input.isConnected && root.contains(input)) draft.focused = false;
+        if (!input.isConnected || !root.contains(input)
+          || this.getDrafts(state.app).get(this.inputKey(input)) !== draft) return;
+        draft.focused = false;
+        void this.updateHp(state.app, input);
       });
     }, true);
     for (const type of ['pointerdown', 'mousedown', 'click', 'dblclick', 'keydown']) {

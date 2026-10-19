@@ -6,6 +6,7 @@ The regression suite covers:
 
 - D&D 6 API arguments and HP/Temp outcomes, full Temp damage overflow, zero Temp damage, absolute corrections, healing caps, non-stacking grant totals, hook cancellation, unavailable APIs, and over-maximum source corrections.
 - Independent arc fractions, modified/zero maxima, numeric ownership/friendliness rules, reversible native resource deduplication, pending saves across windows, preserved drafts, and coalesced item/effect refreshes.
+- Restored drafts save on a real blur without a native change event; input replacement never applies unfinished damage, and change plus blur cannot apply damage twice.
 - Empty Temp HP (null) for GMs, owners and Observers, mixed empty/numeric pools, and combatants without HP. Rendering never writes a replacement Temp value to actor data.
 
 - HP resource resolution, zero HP, invalid values, permissions, visibility, and optional Bar Brawl APIs.
@@ -23,6 +24,7 @@ The Playwright smoke test runs actual browser input and drag/drop events against
 npm ci
 npm test
 npm run build
+python3 -m unittest discover -s tests -p 'test_release_*.py' -v
 npx playwright install --with-deps chromium
 npm run test:browser
 git diff --exit-code -- module.json lang styles/dist
@@ -95,6 +97,8 @@ Use a disposable encounter in your actual V14 build and game system, with a GM a
 
 ## Packaging
 
-The branch manifest and npm metadata are version 1.5.1. Run the validation commands, then package `module.json` at the archive root together with `module/`, `lang/`, and `styles/dist/`. CI uploads these runtime files as an installable test artifact. A source-archive install also works because generated assets are committed. Keep development dependencies and tests out of a release archive.
+The branch manifest and npm metadata are version 1.5.2. `scripts/package-release.py` packages `module.json` at the archive root together with `module/`, `lang/`, and `styles/dist/`. Its tests verify matching standalone/archived manifests, exact-tag download URLs, tag/version mismatches, missing assets, excluded development files, repeatable ZIP bytes, and prerelease tags. Validate CI runs these tests and packages the current source as well as uploading its existing runtime test artifact.
 
-Complete the live checks before publishing the release. The current manifest's download URL points to the literal release tag `latest` and asset name `tracker-enhancements.zip`. Update the published manifest and its corresponding archive together. Keep the old published `combat-enhancements.zip` asset intact for existing installations until their users switch; the new package is installed separately. Finally, install through the new manifest into a clean test world and repeat an HP edit and initiative move. A source merge alone does not update an existing release asset.
+Complete the live checks before publishing the release. The **Package release** workflow builds the published tag and uploads `tracker-enhancements.zip` plus its matching `module.json`. Use the stable manifest at `https://github.com/CanDincer/Tracker-Enhancements/releases/latest/download/module.json`. Each uploaded manifest pins its ZIP to the exact release tag. Publishing starts the workflow; drafts do not. Existing releases can be packaged through the manual workflow with their tag after the workflow is merged to main.
+
+Keep the old published `combat-enhancements.zip` asset intact for existing installations until their users switch; the new package is installed separately. After a successful release workflow, install through the stable manifest into a clean test world and repeat an HP edit and initiative move. No release or asset is published merely by running PR validation.

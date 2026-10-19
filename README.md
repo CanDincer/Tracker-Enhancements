@@ -2,17 +2,17 @@
 
 Adds editable HP fields, health rings, and drag/drop initiative reordering to Foundry VTT's combat tracker. This fork carries compatibility repairs for the V14 tracker while retaining the V12/V13 render hook interface.
 
-Version 1.5 adds D&D 6 health handling on Foundry 14.367 or newer. The 1.5.1 test candidate fixes empty Temp HP disabling health editors. The implementation has automated regression and browser coverage. A licensed Foundry world with your game system and other modules still needs the checks in [TESTING.md](TESTING.md).
+Version 1.5 adds D&D 6 health handling on Foundry 14.367 or newer. Version 1.5.1 fixes empty Temp HP disabling health editors; the 1.5.2 candidate also saves restored drafts on blur and automates release packaging. The implementation has automated regression and browser coverage. A licensed Foundry world with your game system and other modules still needs the checks in [TESTING.md](TESTING.md).
 
 English is the only maintained module language. The module ships and registers only `lang/en.json`, generated from `yaml/lang/en.yaml`.
 
 ## Installation
 
-The published manifest is:
+After a release is packaged, the stable install/update manifest is:
 
-https://raw.githubusercontent.com/CanDincer/Tracker-Enhancements/main/module.json
+https://github.com/CanDincer/Tracker-Enhancements/releases/latest/download/module.json
 
-That manifest downloads `tracker-enhancements.zip` from the release tagged `latest`. Merging source changes does not update that ZIP. Until 1.5.1 is released, install the PR branch archive or its GitHub Actions test artifact using the development instructions below.
+Each release attaches `tracker-enhancements.zip` and a matching `module.json`. The manifest downloads the archive from its exact release tag. The stable URL follows GitHub's latest stable release; prereleases also receive their own versioned assets.
 
 To try a development branch before release, download its source archive, extract it, rename the module directory to `tracker-enhancements`, and place it under your Foundry user data directory's `Data/modules`. The installed directory must contain `module.json`, `module/`, `lang/`, and `styles/dist/`. Restart Foundry and enable Tracker Enhancements in the world. The repository includes generated runtime assets, so a source-archive install does not require Node.js.
 
@@ -86,6 +86,27 @@ npm run test:browser
 Edit English text in `yaml/lang/en.yaml`, the manifest in `yaml/module.yaml`, and styles in `styles/src/`. `npm run build` regenerates `module.json`, `lang/en.json`, and `styles/dist/`; commit generated files with their sources. CI runs the regression suite, build, browser smoke test, and a check that generated files are current.
 
 See [TESTING.md](TESTING.md) for test scope and live-world verification.
+
+## Publishing a release
+
+1. Update the version in `yaml/module.yaml`, `package.json`, and both root package entries in `package-lock.json`. Run `npm run build` and commit the generated assets.
+2. Merge the changes, then create and publish a GitHub release with a matching tag, for example `v1.5.2` for version `1.5.2`.
+3. The **Package release** workflow tests and builds that exact tag, then attaches `tracker-enhancements.zip` and `module.json`. No manual ZIP upload or additional token setup is needed.
+
+Draft releases do not start the workflow until published. Both stable releases and prereleases are supported. The workflow stops if the tag and module/npm versions disagree.
+
+To package an existing release such as `v1.5.1`, open **Actions > Package release > Run workflow**, select `main`, and enter its tag. This also retries or replaces assets for a release. The helper is preserved before checking out older tags, so those tags do not need to contain the new workflow. Wait for a successful run before using the release's assets in Foundry.
+
+Local packaging uses Python 3, with no extra Python packages:
+
+```sh
+npm ci
+npm run build
+python3 -m unittest discover -s tests -p 'test_release_*.py' -v
+python3 scripts/package-release.py --tag v1.5.2 --repository CanDincer/Tracker-Enhancements
+```
+
+The two files are written to `dist/`. Only runtime files are included, with `module.json` directly at the ZIP root.
 
 The [v1.5 health design](docs/v1.5-health-design.md) records the agreed behavior and release acceptance checks. The implementation is in this test branch; live validation with the maintainer's D&D 6 world remains pending.
 

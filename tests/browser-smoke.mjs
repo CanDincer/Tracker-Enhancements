@@ -111,6 +111,18 @@ try {
   await page.waitForFunction(() => testHarness.members[0].actor.system.attributes.hp.value === 100);
   assert.equal(await temp.inputValue(), '23');
 
+  // A restored draft is assigned programmatically, so Tab may not emit change.
+  const beforeRestoredBlur = await page.evaluate(() => testHarness.members[0].actor.updates.length);
+  await temp.fill('10');
+  await page.evaluate(() => testHarness.app.render());
+  assert.equal(await temp.inputValue(), '10');
+  assert.equal(await page.evaluate(() => testHarness.members[0].actor.updates.length), beforeRestoredBlur);
+  await temp.press('Tab');
+  await page.waitForFunction(() => testHarness.members[0].actor.system.attributes.hp.temp === 10);
+  assert.equal(await page.evaluate(() => testHarness.members[0].actor.updates.length), beforeRestoredBlur + 1);
+  await temp.fill('23'); await temp.press('Enter');
+  await page.waitForFunction(() => testHarness.members[0].actor.system.attributes.hp.temp === 23);
+
   await temp.fill('-5');
   await page.evaluate(() => testHarness.app.render());
   assert.equal(await temp.inputValue(), '-5');
